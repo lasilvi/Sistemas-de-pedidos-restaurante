@@ -6,7 +6,7 @@ Este plan de implementación desglosa el diseño del sistema de pedidos de resta
 
 ## Tareas
 
-- [ ] 1. Configurar estructura de proyectos Maven
+- [x] 1. Configurar estructura de proyectos Maven
   - Crear proyecto Maven multi-módulo con dos submódulos: order-service y kitchen-worker
   - Configurar pom.xml padre con dependencias comunes (Spring Boot 3, Java 17, Lombok, PostgreSQL, Spring AMQP)
   - Configurar pom.xml de order-service con dependencias específicas (Spring Web, Spring Data JPA, Flyway, SpringDoc OpenAPI)
@@ -15,30 +15,30 @@ Este plan de implementación desglosa el diseño del sistema de pedidos de resta
   - _Requisitos: 12.1, 12.2, 12.3, 12.4_
 
 - [ ] 2. Implementar modelo de datos y migraciones
-  - [ ] 2.1 Crear enum OrderStatus
+  - [x] 2.1 Crear enum OrderStatus
     - Implementar enum con valores PENDING, IN_PREPARATION, READY
     - _Requisitos: 2.3, 6.2, 7.4_
   
-  - [ ] 2.2 Crear entidad Product
+  - [x] 2.2 Crear entidad Product
     - Implementar clase con anotaciones JPA (@Entity, @Table, @Id, @GeneratedValue)
     - Campos: id (Long), name (String), description (String), isActive (Boolean)
     - Usar Lombok (@Data, @NoArgsConstructor, @AllArgsConstructor)
     - _Requisitos: 1.1, 1.3, 2.2, 9.1_
   
-  - [ ] 2.3 Crear entidad Order
+  - [x] 2.3 Crear entidad Order
     - Implementar clase con anotaciones JPA
     - Campos: id (UUID), tableId (Integer), status (OrderStatus), items (List<OrderItem>), createdAt, updatedAt
     - Implementar métodos @PrePersist y @PreUpdate para timestamps automáticos
     - Configurar relación @OneToMany con OrderItem (cascade ALL, orphanRemoval true)
     - _Requisitos: 2.3, 2.4, 2.5, 9.1_
   
-  - [ ] 2.4 Crear entidad OrderItem
+  - [x] 2.4 Crear entidad OrderItem
     - Implementar clase con anotaciones JPA
     - Campos: id (Long), order (Order), productId (Long), quantity (Integer), note (String)
     - Configurar relación @ManyToOne con Order
     - _Requisitos: 2.1, 9.1_
   
-  - [ ] 2.5 Crear migraciones Flyway
+  - [x] 2.5 Crear migraciones Flyway
     - Crear V1__create_products_table.sql con tabla products
     - Crear V2__create_orders_table.sql con tabla orders e índices
     - Crear V3__create_order_items_table.sql con tabla order_items, foreign keys e índices
@@ -46,53 +46,53 @@ Este plan de implementación desglosa el diseño del sistema de pedidos de resta
     - _Requisitos: 9.2, 9.3_
 
 - [ ] 3. Implementar repositorios
-  - [ ] 3.1 Crear ProductRepository
+  - [x] 3.1 Crear ProductRepository
     - Extender JpaRepository<Product, Long>
     - Agregar método findByIsActiveTrue() para obtener productos activos
     - _Requisitos: 1.1, 1.3_
   
-  - [ ] 3.2 Crear OrderRepository en order-service
+  - [x] 3.2 Crear OrderRepository en order-service
     - Extender JpaRepository<Order, UUID>
     - Agregar método findByStatus(OrderStatus status) para filtrado
     - _Requisitos: 4.1, 5.1, 6.1_
   
-  - [ ] 3.3 Crear OrderItemRepository
+  - [x] 3.3 Crear OrderItemRepository
     - Extender JpaRepository<OrderItem, Long>
     - _Requisitos: 2.1_
   
-  - [ ] 3.4 Crear OrderRepository en kitchen-worker
+  - [x] 3.4 Crear OrderRepository en kitchen-worker
     - Extender JpaRepository<Order, UUID>
     - Copiar entidad Order al proyecto kitchen-worker (solo campos necesarios)
     - _Requisitos: 7.4, 9.4_
 
 - [ ] 4. Implementar DTOs y eventos
-  - [ ] 4.1 Crear DTOs de request
+  - [x] 4.1 Crear DTOs de request
     - CreateOrderRequest con validaciones (@NotNull, @Min, @NotEmpty, @Valid)
     - OrderItemRequest con validaciones
     - UpdateStatusRequest con validación de enum
     - _Requisitos: 2.1, 2.7, 2.8, 6.1_
   
-  - [ ] 4.2 Crear DTOs de response
+  - [-] 4.2 Crear DTOs de response
     - ProductResponse con campos id, name, description
     - OrderResponse con campos completos y lista de OrderItemResponse
     - OrderItemResponse con campos del item
     - ErrorResponse con timestamp, status, error, message
     - _Requisitos: 1.1, 4.1, 11.1, 11.2, 11.3, 11.4, 11.5_
   
-  - [ ] 4.3 Crear OrderPlacedEvent
+  - [~] 4.3 Crear OrderPlacedEvent
     - Implementar clase Serializable con campos: orderId, tableId, items (List<OrderItemEventData>), createdAt
     - Crear clase interna OrderItemEventData con productId y quantity
     - Usar Lombok para getters/setters
     - _Requisitos: 3.1, 3.3, 3.5_
 
 - [ ] 5. Implementar excepciones personalizadas y manejo global
-  - [ ] 5.1 Crear excepciones personalizadas
+  - [~] 5.1 Crear excepciones personalizadas
     - ProductNotFoundException con mensaje descriptivo
     - OrderNotFoundException con mensaje descriptivo
     - InvalidOrderException con mensaje descriptivo
     - _Requisitos: 2.6, 4.3, 6.4, 11.2_
   
-  - [ ] 5.2 Crear GlobalExceptionHandler
+  - [~] 5.2 Crear GlobalExceptionHandler
     - Implementar @RestControllerAdvice
     - Agregar @ExceptionHandler para ProductNotFoundException (404)
     - Agregar @ExceptionHandler para OrderNotFoundException (404)
@@ -104,7 +104,7 @@ Este plan de implementación desglosa el diseño del sistema de pedidos de resta
     - _Requisitos: 11.1, 11.2, 11.3, 11.4, 11.5, 11.6_
 
 - [ ] 6. Configurar RabbitMQ
-  - [ ] 6.1 Crear RabbitMQConfig en order-service
+  - [~] 6.1 Crear RabbitMQConfig en order-service
     - Declarar TopicExchange "order.exchange" (durable)
     - Declarar Queue "order.placed.queue" (durable)
     - Declarar Dead Letter Queue "order.placed.dlq"
@@ -112,7 +112,7 @@ Este plan de implementación desglosa el diseño del sistema de pedidos de resta
     - Configurar MessageConverter (Jackson2JsonMessageConverter)
     - _Requisitos: 3.2, 8.1, 8.2, 8.3, 8.4_
   
-  - [ ] 6.2 Crear RabbitMQConfig en kitchen-worker
+  - [~] 6.2 Crear RabbitMQConfig en kitchen-worker
     - Declarar TopicExchange "order.exchange"
     - Declarar Queue "order.placed.queue" con DLX configurado
     - Declarar Dead Letter Queue "order.placed.dlq"
@@ -122,19 +122,19 @@ Este plan de implementación desglosa el diseño del sistema de pedidos de resta
     - _Requisitos: 7.1, 8.3, 8.5_
 
 - [ ] 7. Implementar servicios de Order Service
-  - [ ] 7.1 Crear MenuService
+  - [~] 7.1 Crear MenuService
     - Implementar método getActiveProducts() que use ProductRepository.findByIsActiveTrue()
     - Mapear entidades Product a ProductResponse
     - _Requisitos: 1.1, 1.2, 1.3_
   
-  - [ ] 7.2 Crear OrderEventPublisher
+  - [~] 7.2 Crear OrderEventPublisher
     - Inyectar RabbitTemplate
     - Implementar método publishOrderPlacedEvent(OrderPlacedEvent event)
     - Usar convertAndSend con exchange "order.exchange" y routing key "order.placed"
     - Agregar try-catch para logging de errores sin lanzar excepción
     - _Requisitos: 3.1, 3.2, 3.4, 3.5_
   
-  - [ ] 7.3 Crear OrderService
+  - [~] 7.3 Crear OrderService
     - Implementar createOrder(CreateOrderRequest request)
       - Validar que todos los productIds existen y están activos
       - Lanzar ProductNotFoundException si algún producto no existe o está inactivo
@@ -159,13 +159,13 @@ Este plan de implementación desglosa el diseño del sistema de pedidos de resta
     - _Requisitos: 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7, 2.8, 3.1, 4.1, 4.2, 5.1, 5.2, 6.2_
 
 - [ ] 8. Implementar controladores de Order Service
-  - [ ] 8.1 Crear MenuController
+  - [~] 8.1 Crear MenuController
     - Endpoint GET /menu
     - Inyectar MenuService
     - Llamar a getActiveProducts() y devolver ResponseEntity con 200 OK
     - _Requisitos: 1.1_
   
-  - [ ] 8.2 Crear OrderController
+  - [~] 8.2 Crear OrderController
     - Endpoint POST /orders con @Valid CreateOrderRequest
       - Llamar a orderService.createOrder()
       - Devolver ResponseEntity con 201 Created
@@ -180,7 +180,7 @@ Este plan de implementación desglosa el diseño del sistema de pedidos de resta
       - Devolver ResponseEntity con 200 OK
     - _Requisitos: 2.1, 4.1, 5.1, 6.1_
 
-- [ ] 9. Configurar Swagger/OpenAPI
+- [~] 9. Configurar Swagger/OpenAPI
   - Crear OpenAPIConfig con @Configuration
   - Configurar OpenAPI bean con información de API (título, versión, descripción)
   - Agregar ejemplos de request/response en anotaciones de controladores
@@ -188,7 +188,7 @@ Este plan de implementación desglosa el diseño del sistema de pedidos de resta
   - _Requisitos: 10.1, 10.2, 10.3, 10.4_
 
 - [ ] 10. Implementar Kitchen Worker
-  - [ ] 10.1 Crear OrderProcessingService
+  - [~] 10.1 Crear OrderProcessingService
     - Inyectar OrderRepository
     - Implementar método processOrder(OrderPlacedEvent event)
       - Buscar Order por event.getOrderId()
@@ -199,7 +199,7 @@ Este plan de implementación desglosa el diseño del sistema de pedidos de resta
     - Agregar try-catch para logging de errores y re-lanzar excepción para trigger retry
     - _Requisitos: 7.2, 7.3, 7.4, 7.5, 7.6_
   
-  - [ ] 10.2 Crear OrderEventListener
+  - [~] 10.2 Crear OrderEventListener
     - Anotar con @Component
     - Inyectar OrderProcessingService
     - Implementar método handleOrderPlacedEvent(OrderPlacedEvent event)
@@ -208,7 +208,7 @@ Este plan de implementación desglosa el diseño del sistema de pedidos de resta
     - _Requisitos: 7.1, 7.2_
 
 - [ ] 11. Crear archivos de configuración
-  - [ ] 11.1 Crear application.yml para order-service
+  - [~] 11.1 Crear application.yml para order-service
     - Configurar spring.application.name = order-service
     - Configurar datasource (url, username, password, driver)
     - Configurar JPA (hibernate.ddl-auto=validate, show-sql=false, dialect)
@@ -219,7 +219,7 @@ Este plan de implementación desglosa el diseño del sistema de pedidos de resta
     - Configurar SpringDoc (api-docs.path, swagger-ui.path)
     - _Requisitos: 12.1, 12.2, 12.5_
   
-  - [ ] 11.2 Crear application.yml para kitchen-worker
+  - [~] 11.2 Crear application.yml para kitchen-worker
     - Configurar spring.application.name = kitchen-worker
     - Configurar datasource (misma BD que order-service)
     - Configurar JPA (hibernate.ddl-auto=validate, show-sql=false)
@@ -229,7 +229,7 @@ Este plan de implementación desglosa el diseño del sistema de pedidos de resta
     - Configurar propiedades custom de RabbitMQ (exchange.name, queue.name, routing-key, dlq)
     - _Requisitos: 12.3, 12.4, 12.6_
 
-- [ ] 12. Checkpoint - Verificar compilación y configuración básica
+- [~] 12. Checkpoint - Verificar compilación y configuración básica
   - Compilar ambos proyectos con mvn clean install
   - Verificar que no hay errores de compilación
   - Verificar que las migraciones Flyway están correctamente ubicadas
@@ -381,7 +381,7 @@ Este plan de implementación desglosa el diseño del sistema de pedidos de resta
     - Verificar que GET /orders/{id} devuelve pedido actualizado
   - _Requisitos: 2.1, 3.1, 7.1, 7.4_
 
-- [ ] 18. Checkpoint final - Verificar sistema completo
+- [~] 18. Checkpoint final - Verificar sistema completo
   - Iniciar PostgreSQL y RabbitMQ (Docker)
   - Ejecutar migraciones Flyway
   - Iniciar order-service y verificar que arranca sin errores
