@@ -92,7 +92,7 @@ Este plan de implementación desglosa el diseño del sistema de pedidos de resta
     - InvalidOrderException con mensaje descriptivo
     - _Requisitos: 2.6, 4.3, 6.4, 11.2_
   
-  - [-] 5.2 Crear GlobalExceptionHandler
+  - [x] 5.2 Crear GlobalExceptionHandler
     - Implementar @RestControllerAdvice
     - Agregar @ExceptionHandler para ProductNotFoundException (404)
     - Agregar @ExceptionHandler para OrderNotFoundException (404)
@@ -104,7 +104,7 @@ Este plan de implementación desglosa el diseño del sistema de pedidos de resta
     - _Requisitos: 11.1, 11.2, 11.3, 11.4, 11.5, 11.6_
 
 - [ ] 6. Configurar RabbitMQ
-  - [~] 6.1 Crear RabbitMQConfig en order-service
+  - [-] 6.1 Crear RabbitMQConfig en order-service
     - Declarar TopicExchange "order.exchange" (durable)
     - Declarar Queue "order.placed.queue" (durable)
     - Declarar Dead Letter Queue "order.placed.dlq"
