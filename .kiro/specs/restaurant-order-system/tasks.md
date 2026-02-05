@@ -19,26 +19,26 @@ Este plan de implementación desglosa el diseño del sistema de pedidos de resta
     - Implementar enum con valores PENDING, IN_PREPARATION, READY
     - _Requisitos: 2.3, 6.2, 7.4_
   
-  - [-] 2.2 Crear entidad Product
+  - [x] 2.2 Crear entidad Product
     - Implementar clase con anotaciones JPA (@Entity, @Table, @Id, @GeneratedValue)
     - Campos: id (Long), name (String), description (String), isActive (Boolean)
     - Usar Lombok (@Data, @NoArgsConstructor, @AllArgsConstructor)
     - _Requisitos: 1.1, 1.3, 2.2, 9.1_
   
-  - [~] 2.3 Crear entidad Order
+  - [x] 2.3 Crear entidad Order
     - Implementar clase con anotaciones JPA
     - Campos: id (UUID), tableId (Integer), status (OrderStatus), items (List<OrderItem>), createdAt, updatedAt
     - Implementar métodos @PrePersist y @PreUpdate para timestamps automáticos
     - Configurar relación @OneToMany con OrderItem (cascade ALL, orphanRemoval true)
     - _Requisitos: 2.3, 2.4, 2.5, 9.1_
   
-  - [~] 2.4 Crear entidad OrderItem
+  - [x] 2.4 Crear entidad OrderItem
     - Implementar clase con anotaciones JPA
     - Campos: id (Long), order (Order), productId (Long), quantity (Integer), note (String)
     - Configurar relación @ManyToOne con Order
     - _Requisitos: 2.1, 9.1_
   
-  - [~] 2.5 Crear migraciones Flyway
+  - [x] 2.5 Crear migraciones Flyway
     - Crear V1__create_products_table.sql con tabla products
     - Crear V2__create_orders_table.sql con tabla orders e índices
     - Crear V3__create_order_items_table.sql con tabla order_items, foreign keys e índices
@@ -46,21 +46,21 @@ Este plan de implementación desglosa el diseño del sistema de pedidos de resta
     - _Requisitos: 9.2, 9.3_
 
 - [ ] 3. Implementar repositorios
-  - [~] 3.1 Crear ProductRepository
+  - [x] 3.1 Crear ProductRepository
     - Extender JpaRepository<Product, Long>
     - Agregar método findByIsActiveTrue() para obtener productos activos
     - _Requisitos: 1.1, 1.3_
   
-  - [~] 3.2 Crear OrderRepository en order-service
+  - [x] 3.2 Crear OrderRepository en order-service
     - Extender JpaRepository<Order, UUID>
     - Agregar método findByStatus(OrderStatus status) para filtrado
     - _Requisitos: 4.1, 5.1, 6.1_
   
-  - [~] 3.3 Crear OrderItemRepository
+  - [x] 3.3 Crear OrderItemRepository
     - Extender JpaRepository<OrderItem, Long>
     - _Requisitos: 2.1_
   
-  - [~] 3.4 Crear OrderRepository en kitchen-worker
+  - [-] 3.4 Crear OrderRepository en kitchen-worker
     - Extender JpaRepository<Order, UUID>
     - Copiar entidad Order al proyecto kitchen-worker (solo campos necesarios)
     - _Requisitos: 7.4, 9.4_
