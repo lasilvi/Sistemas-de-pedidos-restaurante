@@ -60,19 +60,19 @@ Este plan de implementación desglosa el diseño del sistema de pedidos de resta
     - Extender JpaRepository<OrderItem, Long>
     - _Requisitos: 2.1_
   
-  - [-] 3.4 Crear OrderRepository en kitchen-worker
+  - [x] 3.4 Crear OrderRepository en kitchen-worker
     - Extender JpaRepository<Order, UUID>
     - Copiar entidad Order al proyecto kitchen-worker (solo campos necesarios)
     - _Requisitos: 7.4, 9.4_
 
 - [ ] 4. Implementar DTOs y eventos
-  - [~] 4.1 Crear DTOs de request
+  - [x] 4.1 Crear DTOs de request
     - CreateOrderRequest con validaciones (@NotNull, @Min, @NotEmpty, @Valid)
     - OrderItemRequest con validaciones
     - UpdateStatusRequest con validación de enum
     - _Requisitos: 2.1, 2.7, 2.8, 6.1_
   
-  - [~] 4.2 Crear DTOs de response
+  - [-] 4.2 Crear DTOs de response
     - ProductResponse con campos id, name, description
     - OrderResponse con campos completos y lista de OrderItemResponse
     - OrderItemResponse con campos del item
