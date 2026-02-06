@@ -34,16 +34,44 @@ const products: Product[] = [
 ]
 
 const orders: Order[] = []
+let seeded = false
+
+function seedOrders() {
+  if (seeded) return
+  seeded = true
+
+  const createdAt = nowIso()
+  orders.push(
+    {
+      id: nextId(),
+      tableId: 3,
+      status: 'PENDING',
+      items: [{ productId: '1', quantity: 2 }],
+      createdAt,
+      updatedAt: createdAt,
+    },
+    {
+      id: nextId(),
+      tableId: 5,
+      status: 'IN_PREPARATION',
+      items: [{ productId: '2', quantity: 1 }],
+      createdAt,
+      updatedAt: createdAt,
+    },
+  )
+}
 
 function findOrder(orderId: string) {
   return orders.find((o) => o.id === orderId)
 }
 
 export async function mockGetMenu(): Promise<Product[]> {
+  seedOrders()
   return products.filter((p) => p.isActive)
 }
 
 export async function mockCreateOrder(req: CreateOrderRequest): Promise<CreateOrderResponse> {
+  seedOrders()
   const id = nextId()
   const createdAt = nowIso()
 
@@ -67,18 +95,21 @@ export async function mockCreateOrder(req: CreateOrderRequest): Promise<CreateOr
 }
 
 export async function mockGetOrder(orderId: string): Promise<Order> {
+  seedOrders()
   const order = findOrder(orderId)
   if (!order) throw new Error('Pedido no encontrado')
   return order
 }
 
 export async function mockListOrders(params: { status?: OrderStatus[] }): Promise<Order[]> {
+  seedOrders()
   const { status } = params
   if (!status || status.length === 0) return orders
   return orders.filter((o) => status.includes(o.status))
 }
 
 export async function mockPatchOrderStatus(orderId: string, newStatus: OrderStatus): Promise<Order> {
+  seedOrders()
   const order = findOrder(orderId)
   if (!order) throw new Error('Pedido no encontrado')
 
