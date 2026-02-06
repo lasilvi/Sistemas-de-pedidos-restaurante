@@ -1,70 +1,108 @@
-services:
+﻿services:
   postgres:
-    image: postgres:16
-    container_name: orders-postgres
+    image: postgres:15
+    container_name: restaurant-postgres
     environment:
-      POSTGRES_DB: restaurant_db
-      POSTGRES_USER: restaurant_user
-      POSTGRES_PASSWORD: restaurant_pass
+      POSTGRES_DB: ${POSTGRES_DB:-restaurant_db}
+      POSTGRES_USER: ${POSTGRES_USER:-restaurant_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-restaurant_pass}
     ports:
       - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U restaurant_user -d restaurant_db"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-restaurant_user} -d ${POSTGRES_DB:-restaurant_db}"]
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - restaurant-net
 
   rabbitmq:
     image: rabbitmq:3-management
-    container_name: orders-rabbitmq
+    container_name: restaurant-rabbitmq
     ports:
       - "5672:5672"
       - "15672:15672"
     environment:
-      RABBITMQ_DEFAULT_USER: guest
-      RABBITMQ_DEFAULT_PASS: guest
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-guest}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASS:-guest}
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - restaurant-net
 
   order-service:
     build:
       context: .
       dockerfile: order-service/Dockerfile
-    container_name: orders-service
+    container_name: restaurant-order-service
     ports:
       - "8080:8080"
     environment:
-      DB_URL: jdbc:postgresql://postgres:5432/restaurant_db
-      DB_USER: restaurant_user
-      DB_PASS: restaurant_pass
-      RABBITMQ_HOST: rabbitmq
-      RABBITMQ_PORT: 5672
-      RABBITMQ_USER: guest
-      RABBITMQ_PASS: guest
+      DB_URL: ${DB_URL:-jdbc:postgresql://postgres:5432/restaurant_db}
+      DB_USER: ${DB_USER:-restaurant_user}
+      DB_PASS: ${DB_PASS:-restaurant_pass}
+      RABBITMQ_HOST: ${RABBITMQ_HOST:-rabbitmq}
+      RABBITMQ_PORT: ${RABBITMQ_PORT:-5672}
+      RABBITMQ_USER: ${RABBITMQ_USER:-guest}
+      RABBITMQ_PASS: ${RABBITMQ_PASS:-guest}
     depends_on:
       postgres:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
+    networks:
+      - restaurant-net
 
   kitchen-worker:
     build:
       context: .
       dockerfile: kitchen-worker/Dockerfile
-    container_name: orders-kitchen-worker
+    container_name: restaurant-kitchen-worker
     environment:
-      DB_URL: jdbc:postgresql://postgres:5432/restaurant_db
-      DB_USER: restaurant_user
-      DB_PASS: restaurant_pass
-      RABBITMQ_HOST: rabbitmq
-      RABBITMQ_PORT: 5672
-      RABBITMQ_USER: guest
-      RABBITMQ_PASS: guest
+      DB_URL: ${DB_URL:-jdbc:postgresql://postgres:5432/restaurant_db}
+      DB_USER: ${DB_USER:-restaurant_user}
+      DB_PASS: ${DB_PASS:-restaurant_pass}
+      RABBITMQ_HOST: ${RABBITMQ_HOST:-rabbitmq}
+      RABBITMQ_PORT: ${RABBITMQ_PORT:-5672}
+      RABBITMQ_USER: ${RABBITMQ_USER:-guest}
+      RABBITMQ_PASS: ${RABBITMQ_PASS:-guest}
     depends_on:
       postgres:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
+    networks:
+      - restaurant-net
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    container_name: restaurant-frontend
+    ports:
+      - "5173:5173"
+    environment:
+      VITE_USE_MOCK: ${VITE_USE_MOCK:-false}
+      VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:8080}
+      VITE_KITCHEN_TOKEN_HEADER: ${VITE_KITCHEN_TOKEN_HEADER:-X-Kitchen-Token}
+      VITE_KITCHEN_PIN: ${VITE_KITCHEN_PIN:-1234}
+      VITE_KITCHEN_FIXED_TOKEN: ${VITE_KITCHEN_FIXED_TOKEN:-}
+    depends_on:
+      - order-service
+    networks:
+      - restaurant-net
+
+volumes:
+  postgres_data:
+  rabbitmq_data:
+
+networks:
+  restaurant-net:
+    driver: bridge

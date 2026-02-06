@@ -1,8 +1,8 @@
-spring:
+﻿spring:
   application:
     name: kitchen-worker
   datasource:
-    url: ${DB_URL:jdbc:postgresql://localhost:5434/kitchen_worker_db}
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/restaurant_db}
     username: ${DB_USER:restaurant_user}
     password: ${DB_PASS:restaurant_pass}
     driver-class-name: org.postgresql.Driver
@@ -40,3 +40,4 @@ rabbitmq:
   dlq:
     name: order.placed.dlq
     exchange: order.dlx
+

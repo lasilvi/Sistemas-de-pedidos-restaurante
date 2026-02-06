@@ -1,8 +1,8 @@
-spring:
+﻿spring:
   application:
     name: order-service
   datasource:
-    url: ${DB_URL:jdbc:postgresql://localhost:5433/restaurant_db}
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/restaurant_db}
     username: ${DB_USER:restaurant_user}
     password: ${DB_PASS:restaurant_pass}
     driver-class-name: org.postgresql.Driver
@@ -38,3 +38,4 @@ springdoc:
     path: /api-docs
   swagger-ui:
     path: /swagger-ui.html
+
