@@ -1,5 +1,7 @@
 package com.restaurant.orderservice.config;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.springframework.amqp.core.Binding;
 import org.springframework.amqp.core.BindingBuilder;
 import org.springframework.amqp.core.Queue;
@@ -23,9 +25,6 @@ public class RabbitMQConfig {
     @Value("${rabbitmq.routing-key.order-placed}")
     private String orderPlacedRoutingKey;
 
-    private static final String ORDER_PLACED_QUEUE = "order.placed.queue";
-    private static final String ORDER_PLACED_DLQ = "order.placed.dlq";
-
     /**
      * Declares the topic exchange for order events.
      * Topic exchanges route messages to queues based on routing key patterns.
@@ -38,49 +37,16 @@ public class RabbitMQConfig {
     }
 
     /**
-     * Declares the main queue for order.placed events.
-     * This queue will receive messages published with the "order.placed" routing key.
-     * 
-     * @return Queue configured as durable
-     */
-    @Bean
-    public Queue orderPlacedQueue() {
-        return new Queue(ORDER_PLACED_QUEUE, true);
-    }
-
-    /**
-     * Declares the Dead Letter Queue for failed order.placed messages.
-     * Messages that fail processing after retries will be routed here for manual inspection.
-     * 
-     * @return Queue configured as durable
-     */
-    @Bean
-    public Queue orderPlacedDLQ() {
-        return new Queue(ORDER_PLACED_DLQ, true);
-    }
-
-    /**
-     * Binds the order.placed queue to the order exchange with the specified routing key.
-     * Messages published to the exchange with routing key "order.placed" will be routed to this queue.
-     * 
-     * @return Binding between queue and exchange
-     */
-    @Bean
-    public Binding orderPlacedBinding() {
-        return BindingBuilder
-                .bind(orderPlacedQueue())
-                .to(orderExchange())
-                .with(orderPlacedRoutingKey);
-    }
-
-    /**
      * Configures the message converter to use Jackson for JSON serialization/deserialization.
      * This allows automatic conversion of Java objects to JSON when publishing messages.
+     * Registers JavaTimeModule to support Java 8 date/time types like LocalDateTime.
      * 
      * @return MessageConverter configured for JSON
      */
     @Bean
     public MessageConverter messageConverter() {
-        return new Jackson2JsonMessageConverter();
+        ObjectMapper objectMapper = new ObjectMapper();
+        objectMapper.registerModule(new JavaTimeModule());
+        return new Jackson2JsonMessageConverter(objectMapper);
     }
 }

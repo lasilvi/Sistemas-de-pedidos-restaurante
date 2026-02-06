@@ -62,16 +62,22 @@ public class OrderProcessingService {
             // Retrieve the order from the database
             Optional<Order> orderOpt = orderRepository.findById(event.getOrderId());
             
-            // If order doesn't exist, log error and return (don't throw exception)
-            // This prevents the message from being reprocessed indefinitely
+            Order order;
             if (orderOpt.isEmpty()) {
-                log.error("Order not found for event: orderId={}, tableId={}. Message will be acknowledged.", 
-                    event.getOrderId(), event.getTableId());
-                return;
+                // Order doesn't exist in kitchen-worker database, create it
+                log.info("Order not found in kitchen-worker database, creating new record: orderId={}", 
+                    event.getOrderId());
+                order = new Order();
+                order.setId(event.getOrderId());
+                order.setTableId(event.getTableId());
+                order.setStatus(OrderStatus.PENDING);
+                order.setCreatedAt(event.getCreatedAt());
+                order.setUpdatedAt(event.getCreatedAt());
+            } else {
+                order = orderOpt.get();
             }
             
             // Update order status to IN_PREPARATION
-            Order order = orderOpt.get();
             order.setStatus(OrderStatus.IN_PREPARATION);
             
             // Save the order (updatedAt is automatically updated by @PreUpdate)

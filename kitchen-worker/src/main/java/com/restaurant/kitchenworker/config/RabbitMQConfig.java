@@ -1,5 +1,7 @@
 package com.restaurant.kitchenworker.config;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.springframework.amqp.core.Binding;
 import org.springframework.amqp.core.BindingBuilder;
 import org.springframework.amqp.core.Queue;
@@ -126,6 +128,7 @@ public class RabbitMQConfig {
     /**
      * Configures the message converter to use Jackson for JSON serialization/deserialization.
      * This allows automatic conversion of JSON messages to Java objects when consuming messages.
+     * Registers JavaTimeModule to support Java 8 date/time types like LocalDateTime.
      * 
      * The retry policy is configured in application.yml:
      * - Max attempts: 3
@@ -137,6 +140,8 @@ public class RabbitMQConfig {
      */
     @Bean
     public MessageConverter messageConverter() {
-        return new Jackson2JsonMessageConverter();
+        ObjectMapper objectMapper = new ObjectMapper();
+        objectMapper.registerModule(new JavaTimeModule());
+        return new Jackson2JsonMessageConverter(objectMapper);
     }
 }

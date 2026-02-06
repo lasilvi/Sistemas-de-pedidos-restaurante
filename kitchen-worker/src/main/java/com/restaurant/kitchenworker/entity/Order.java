@@ -27,10 +27,9 @@ public class Order {
     
     /**
      * Unique identifier for the order.
-     * Generated automatically as a UUID.
+     * Not generated - uses the UUID from the order-service.
      */
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
     private UUID id;
     
     /**

@@ -2,13 +2,13 @@ spring:
   application:
     name: kitchen-worker
   datasource:
-    url: jdbc:postgresql://localhost:5432/restaurant_db
+    url: jdbc:postgresql://localhost:5434/kitchen_worker_db
     username: restaurant_user
     password: restaurant_pass
     driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:
-      ddl-auto: validate
+      ddl-auto: update
     show-sql: false
     properties:
       hibernate:
