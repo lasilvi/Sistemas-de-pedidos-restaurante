@@ -1,0 +1,42 @@
+spring:
+  application:
+    name: kitchen-worker
+  datasource:
+    url: jdbc:postgresql://localhost:5434/kitchen_worker_db
+    username: restaurant_user
+    password: restaurant_pass
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: guest
+    password: guest
+    listener:
+      simple:
+        retry:
+          enabled: true
+          initial-interval: 1000
+          max-attempts: 3
+          multiplier: 2.0
+          max-interval: 10000
+
+server:
+  port: 8081
+
+rabbitmq:
+  exchange:
+    name: order.exchange
+  queue:
+    name: order.placed.queue
+  routing-key:
+    order-placed: order.placed
+  dlq:
+    name: order.placed.dlq
+    exchange: order.dlx

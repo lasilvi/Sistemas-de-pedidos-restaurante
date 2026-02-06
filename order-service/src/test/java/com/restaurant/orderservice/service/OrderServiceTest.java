@@ -1,0 +1,292 @@
+package com.restaurant.orderservice.service;
+
+import com.restaurant.orderservice.dto.*;
+import com.restaurant.orderservice.entity.Order;
+import com.restaurant.orderservice.entity.OrderItem;
+import com.restaurant.orderservice.entity.Product;
+import com.restaurant.orderservice.enums.OrderStatus;
+import com.restaurant.orderservice.exception.InvalidOrderException;
+import com.restaurant.orderservice.exception.OrderNotFoundException;
+import com.restaurant.orderservice.exception.ProductNotFoundException;
+import com.restaurant.orderservice.repository.OrderRepository;
+import com.restaurant.orderservice.repository.ProductRepository;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+import java.time.LocalDateTime;
+import java.util.*;
+
+import static org.assertj.core.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
+
+/**
+ * Unit tests for OrderService.
+ * 
+ * Tests the core business logic for order creation, retrieval, filtering, and status updates.
+ * Uses Mockito to mock repository dependencies.
+ */
+@ExtendWith(MockitoExtension.class)
+class OrderServiceTest {
+    
+    @Mock
+    private OrderRepository orderRepository;
+    
+    @Mock
+    private ProductRepository productRepository;
+    
+    @Mock
+    private OrderEventPublisher orderEventPublisher;
+    
+    @InjectMocks
+    private OrderService orderService;
+    
+    private Product activeProduct;
+    private Product inactiveProduct;
+    
+    @BeforeEach
+    void setUp() {
+        activeProduct = new Product();
+        activeProduct.setId(1L);
+        activeProduct.setName("Pizza");
+        activeProduct.setDescription("Delicious pizza");
+        activeProduct.setIsActive(true);
+        
+        inactiveProduct = new Product();
+        inactiveProduct.setId(2L);
+        inactiveProduct.setName("Old Burger");
+        inactiveProduct.setDescription("Discontinued burger");
+        inactiveProduct.setIsActive(false);
+    }
+    
+    @Test
+    void createOrder_withValidData_createsOrderWithPendingStatus() {
+        // Arrange
+        OrderItemRequest itemRequest = new OrderItemRequest(1L, 2, "No onions");
+        CreateOrderRequest request = new CreateOrderRequest(5, List.of(itemRequest));
+        
+        when(productRepository.findById(1L)).thenReturn(Optional.of(activeProduct));
+        
+        Order savedOrder = new Order();
+        savedOrder.setId(UUID.randomUUID());
+        savedOrder.setTableId(5);
+        savedOrder.setStatus(OrderStatus.PENDING);
+        savedOrder.setCreatedAt(LocalDateTime.now());
+        savedOrder.setUpdatedAt(LocalDateTime.now());
+        
+        OrderItem orderItem = new OrderItem();
+        orderItem.setId(1L);
+        orderItem.setOrder(savedOrder);
+        orderItem.setProductId(1L);
+        orderItem.setQuantity(2);
+        orderItem.setNote("No onions");
+        savedOrder.setItems(List.of(orderItem));
+        
+        when(orderRepository.save(any(Order.class))).thenReturn(savedOrder);
+        
+        // Act
+        OrderResponse response = orderService.createOrder(request);
+        
+        // Assert
+        assertThat(response).isNotNull();
+        assertThat(response.getId()).isNotNull();
+        assertThat(response.getTableId()).isEqualTo(5);
+        assertThat(response.getStatus()).isEqualTo(OrderStatus.PENDING);
+        assertThat(response.getItems()).hasSize(1);
+        assertThat(response.getCreatedAt()).isNotNull();
+        assertThat(response.getUpdatedAt()).isNotNull();
+        
+        verify(orderRepository).save(any(Order.class));
+        verify(orderEventPublisher).publishOrderPlacedEvent(any());
+    }
+    
+    @Test
+    void createOrder_withNonExistentProduct_throwsProductNotFoundException() {
+        // Arrange
+        OrderItemRequest itemRequest = new OrderItemRequest(999L, 1, null);
+        CreateOrderRequest request = new CreateOrderRequest(5, List.of(itemRequest));
+        
+        when(productRepository.findById(999L)).thenReturn(Optional.empty());
+        
+        // Act & Assert
+        assertThatThrownBy(() -> orderService.createOrder(request))
+                .isInstanceOf(ProductNotFoundException.class)
+                .hasMessageContaining("Product not found with id: 999");
+        
+        verify(orderRepository, never()).save(any());
+        verify(orderEventPublisher, never()).publishOrderPlacedEvent(any());
+    }
+    
+    @Test
+    void createOrder_withInactiveProduct_throwsProductNotFoundException() {
+        // Arrange
+        OrderItemRequest itemRequest = new OrderItemRequest(2L, 1, null);
+        CreateOrderRequest request = new CreateOrderRequest(5, List.of(itemRequest));
+        
+        when(productRepository.findById(2L)).thenReturn(Optional.of(inactiveProduct));
+        
+        // Act & Assert
+        assertThatThrownBy(() -> orderService.createOrder(request))
+                .isInstanceOf(ProductNotFoundException.class)
+                .hasMessageContaining("Product not found with id: 2");
+        
+        verify(orderRepository, never()).save(any());
+        verify(orderEventPublisher, never()).publishOrderPlacedEvent(any());
+    }
+    
+    @Test
+    void createOrder_withInvalidTableId_throwsInvalidOrderException() {
+        // Arrange
+        OrderItemRequest itemRequest = new OrderItemRequest(1L, 1, null);
+        CreateOrderRequest request = new CreateOrderRequest(0, List.of(itemRequest));
+        
+        // Act & Assert
+        assertThatThrownBy(() -> orderService.createOrder(request))
+                .isInstanceOf(InvalidOrderException.class)
+                .hasMessageContaining("Table ID must be a positive integer");
+        
+        verify(productRepository, never()).findById(any());
+        verify(orderRepository, never()).save(any());
+    }
+    
+    @Test
+    void createOrder_withEmptyItems_throwsInvalidOrderException() {
+        // Arrange
+        CreateOrderRequest request = new CreateOrderRequest(5, Collections.emptyList());
+        
+        // Act & Assert
+        assertThatThrownBy(() -> orderService.createOrder(request))
+                .isInstanceOf(InvalidOrderException.class)
+                .hasMessageContaining("Order must contain at least one item");
+        
+        verify(productRepository, never()).findById(any());
+        verify(orderRepository, never()).save(any());
+    }
+    
+    @Test
+    void getOrderById_withValidId_returnsOrder() {
+        // Arrange
+        UUID orderId = UUID.randomUUID();
+        Order order = new Order();
+        order.setId(orderId);
+        order.setTableId(5);
+        order.setStatus(OrderStatus.PENDING);
+        order.setCreatedAt(LocalDateTime.now());
+        order.setUpdatedAt(LocalDateTime.now());
+        order.setItems(new ArrayList<>());
+        
+        when(orderRepository.findById(orderId)).thenReturn(Optional.of(order));
+        
+        // Act
+        OrderResponse response = orderService.getOrderById(orderId);
+        
+        // Assert
+        assertThat(response).isNotNull();
+        assertThat(response.getId()).isEqualTo(orderId);
+        assertThat(response.getTableId()).isEqualTo(5);
+        assertThat(response.getStatus()).isEqualTo(OrderStatus.PENDING);
+    }
+    
+    @Test
+    void getOrderById_withNonExistentId_throwsOrderNotFoundException() {
+        // Arrange
+        UUID orderId = UUID.randomUUID();
+        when(orderRepository.findById(orderId)).thenReturn(Optional.empty());
+        
+        // Act & Assert
+        assertThatThrownBy(() -> orderService.getOrderById(orderId))
+                .isInstanceOf(OrderNotFoundException.class)
+                .hasMessageContaining("Order not found with id: " + orderId);
+    }
+    
+    @Test
+    void getOrders_withoutStatusFilter_returnsAllOrders() {
+        // Arrange
+        Order order1 = createTestOrder(OrderStatus.PENDING);
+        Order order2 = createTestOrder(OrderStatus.IN_PREPARATION);
+        
+        when(orderRepository.findAll()).thenReturn(List.of(order1, order2));
+        
+        // Act
+        List<OrderResponse> responses = orderService.getOrders(null);
+        
+        // Assert
+        assertThat(responses).hasSize(2);
+        verify(orderRepository).findAll();
+        verify(orderRepository, never()).findByStatus(any());
+    }
+    
+    @Test
+    void getOrders_withStatusFilter_returnsFilteredOrders() {
+        // Arrange
+        Order order1 = createTestOrder(OrderStatus.PENDING);
+        Order order2 = createTestOrder(OrderStatus.PENDING);
+        
+        when(orderRepository.findByStatus(OrderStatus.PENDING))
+                .thenReturn(List.of(order1, order2));
+        
+        // Act
+        List<OrderResponse> responses = orderService.getOrders(OrderStatus.PENDING);
+        
+        // Assert
+        assertThat(responses).hasSize(2);
+        assertThat(responses).allMatch(r -> r.getStatus() == OrderStatus.PENDING);
+        verify(orderRepository).findByStatus(OrderStatus.PENDING);
+        verify(orderRepository, never()).findAll();
+    }
+    
+    @Test
+    void updateOrderStatus_withValidData_updatesStatusSuccessfully() {
+        // Arrange
+        UUID orderId = UUID.randomUUID();
+        Order order = createTestOrder(OrderStatus.PENDING);
+        order.setId(orderId);
+        
+        Order updatedOrder = createTestOrder(OrderStatus.IN_PREPARATION);
+        updatedOrder.setId(orderId);
+        
+        when(orderRepository.findById(orderId)).thenReturn(Optional.of(order));
+        when(orderRepository.save(any(Order.class))).thenReturn(updatedOrder);
+        
+        // Act
+        OrderResponse response = orderService.updateOrderStatus(orderId, OrderStatus.IN_PREPARATION);
+        
+        // Assert
+        assertThat(response).isNotNull();
+        assertThat(response.getId()).isEqualTo(orderId);
+        assertThat(response.getStatus()).isEqualTo(OrderStatus.IN_PREPARATION);
+        
+        verify(orderRepository).findById(orderId);
+        verify(orderRepository).save(any(Order.class));
+    }
+    
+    @Test
+    void updateOrderStatus_withNonExistentOrder_throwsOrderNotFoundException() {
+        // Arrange
+        UUID orderId = UUID.randomUUID();
+        when(orderRepository.findById(orderId)).thenReturn(Optional.empty());
+        
+        // Act & Assert
+        assertThatThrownBy(() -> orderService.updateOrderStatus(orderId, OrderStatus.READY))
+                .isInstanceOf(OrderNotFoundException.class)
+                .hasMessageContaining("Order not found with id: " + orderId);
+        
+        verify(orderRepository, never()).save(any());
+    }
+    
+    private Order createTestOrder(OrderStatus status) {
+        Order order = new Order();
+        order.setId(UUID.randomUUID());
+        order.setTableId(5);
+        order.setStatus(status);
+        order.setCreatedAt(LocalDateTime.now());
+        order.setUpdatedAt(LocalDateTime.now());
+        order.setItems(new ArrayList<>());
+        return order;
+    }
+}
