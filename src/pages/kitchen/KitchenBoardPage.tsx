@@ -8,36 +8,23 @@ import { SectionTitle } from '@/components/SectionTitle'
 import { Badge } from '@/components/Badge'
 import { ErrorState } from '@/components/ErrorState'
 import { Loading } from '@/components/Loading'
-import { clearKitchenToken, getKitchenToken } from '@/store/kitchenAuth'
 
 export function KitchenBoardPage() {
   const navigate = useNavigate()
-  const kitchenToken = getKitchenToken()
 
   const [statusFilter, setStatusFilter] = useState<OrderStatus[]>(ACTIVE_STATUSES)
 
   const ordersQ = useQuery({
     queryKey: ['kitchen-orders', statusFilter.join(',')],
-    queryFn: () => listOrders({ status: statusFilter }, kitchenToken),
-    enabled: Boolean(kitchenToken),
+    queryFn: () => listOrders({ status: statusFilter }),
     refetchInterval: 3_000,
   })
 
   const patchM = useMutation({
     mutationFn: (p: { orderId: string; newStatus: OrderStatus }) =>
-      patchOrderStatus(p.orderId, p.newStatus, kitchenToken),
+      patchOrderStatus(p.orderId, p.newStatus),
     onSuccess: () => ordersQ.refetch(),
   })
-
-  if (!kitchenToken) {
-    return (
-      <ErrorState
-        title="No has iniciado sesión de cocina"
-        detail="Ingresa el PIN para continuar."
-        onRetry={() => navigate('/kitchen')}
-      />
-    )
-  }
 
   if (ordersQ.isLoading) return <Loading label="Cargando pedidos…" />
 
@@ -55,24 +42,16 @@ export function KitchenBoardPage() {
 
   const grouped = useMemo(() => {
     const by: Record<OrderStatus, Order[]> = {
-      CREATED: [],
-      SUBMITTED: [],
+      PENDING: [],
       IN_PREPARATION: [],
       READY: [],
-      DELIVERED: [],
-      CANCELED: [],
     }
     for (const o of orders) by[o.status]?.push(o)
     return by
   }, [orders])
 
-  function logout() {
-    clearKitchenToken()
-    navigate('/kitchen', { replace: true })
-  }
-
   function orderIdOf(o: Order) {
-    return o.orderId ?? o.id
+    return o.id
   }
 
   return (
@@ -81,8 +60,8 @@ export function KitchenBoardPage() {
         title="Bandeja de cocina"
         subtitle="Pedidos activos (refresca cada 3s)."
         right={
-          <button className="btn btn-ghost cursor-pointer" onClick={logout}>
-            Salir
+          <button className="btn btn-ghost cursor-pointer" onClick={() => navigate('/client/table')}>
+            Ir a cliente
           </button>
         }
       />
@@ -158,7 +137,7 @@ function OrderRow({
   patchPending: boolean
   onChangeStatus: (s: OrderStatus) => void
 }) {
-  const id = order.orderId ?? order.id
+  const id = order.id
   const next = NEXT_STATUSES[order.status] ?? []
 
   return (

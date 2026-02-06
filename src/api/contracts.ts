@@ -7,12 +7,9 @@ export type Product = {
 }
 
 export type OrderStatus =
-  | 'CREATED'
-  | 'SUBMITTED'
+  | 'PENDING'
   | 'IN_PREPARATION'
   | 'READY'
-  | 'DELIVERED'
-  | 'CANCELED'
 
 export type OrderItem = {
   productId: string
@@ -24,7 +21,6 @@ export type OrderItem = {
 
 export type Order = {
   id: string
-  orderId?: string // por compatibilidad si backend usa orderId en lugar de id
   tableId: number
   status: OrderStatus
   items: OrderItem[]
@@ -41,6 +37,6 @@ export type CreateOrderRequest = {
 }
 
 export type CreateOrderResponse = {
-  orderId: string
+  id: string
   status: OrderStatus
 }

@@ -18,7 +18,7 @@ export function CartPage() {
     mutationFn: (req: CreateOrderRequest) => createOrder(req),
     onSuccess: (res) => {
       actions.clear()
-      navigate(`/client/confirm/${encodeURIComponent(res.orderId)}`)
+      navigate(`/client/confirm/${encodeURIComponent(res.id)}`)
     },
     onError: (err: unknown) => {
       const msg = err instanceof Error ? err.message : 'No se pudo crear el pedido'

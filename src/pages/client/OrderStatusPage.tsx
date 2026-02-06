@@ -77,7 +77,7 @@ export function OrderStatusPage() {
             </div>
             <div className="text-sm">
               <span className="text-slate-400">Estado:</span>{' '}
-              <Badge>{STATUS_LABEL[orderQ.data?.status ?? 'SUBMITTED']}</Badge>
+              <Badge>{STATUS_LABEL[orderQ.data?.status ?? 'PENDING']}</Badge>
             </div>
             <div className="text-xs text-slate-500">
               Actualiza automáticamente cada 5s.

@@ -1,6 +1,6 @@
-import { http } from '@/api/http'
 import type { Product } from '@/api/contracts'
+import { mockGetMenu } from '@/api/mock'
 
 export function getMenu() {
-  return http<Product[]>('/menu')
+  return mockGetMenu()
 }
