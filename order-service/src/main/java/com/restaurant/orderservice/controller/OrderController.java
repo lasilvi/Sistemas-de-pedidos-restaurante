@@ -88,7 +88,7 @@ public class OrderController {
      */
     @GetMapping
     public ResponseEntity<List<OrderResponse>> getOrders(
-            @RequestParam(name = "status", required = false) OrderStatus status) {
+            @RequestParam(name = "status", required = false) List<OrderStatus> status) {
         List<OrderResponse> orders = orderService.getOrders(status);
         return ResponseEntity.ok(orders);
     }

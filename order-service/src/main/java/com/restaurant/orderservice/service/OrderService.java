@@ -172,16 +172,16 @@ public class OrderService {
      * - 5.2: Returns only orders matching the specified status when provided
      */
     @Transactional(readOnly = true)
-    public List<OrderResponse> getOrders(OrderStatus status) {
+    public List<OrderResponse> getOrders(List<OrderStatus> status) {
         log.info("Retrieving orders with status filter: {}", status);
         
         List<Order> orders;
-        if (status == null) {
+        if (status == null || status.isEmpty()) {
             // Return all orders
             orders = orderRepository.findAll();
         } else {
-            // Return orders filtered by status
-            orders = orderRepository.findByStatus(status);
+            // Return orders filtered by any of the provided statuses
+            orders = orderRepository.findByStatusIn(status);
         }
         
         return orders.stream()

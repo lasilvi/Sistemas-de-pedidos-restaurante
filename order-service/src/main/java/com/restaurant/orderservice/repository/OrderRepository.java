@@ -32,4 +32,16 @@ public interface OrderRepository extends JpaRepository<Order, UUID> {
      * Validates Requirements: 5.1, 5.2, 5.4
      */
     List<Order> findByStatus(OrderStatus status);
+
+    /**
+     * Finds all orders with any of the specified statuses.
+     *
+     * This method allows filtering by multiple statuses in a single query,
+     * which is useful for kitchen views that need PENDING, IN_PREPARATION,
+     * and READY orders together.
+     *
+     * @param statuses List of order statuses to include
+     * @return List of orders matching any of the specified statuses.
+     */
+    List<Order> findByStatusIn(List<OrderStatus> statuses);
 }

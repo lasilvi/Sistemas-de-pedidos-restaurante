@@ -124,10 +124,10 @@ class OrderControllerTest {
     void getOrders_WithStatusFilter_Returns200OK() {
         // Arrange
         List<OrderResponse> orders = Arrays.asList(orderResponse);
-        when(orderService.getOrders(OrderStatus.PENDING)).thenReturn(orders);
+        when(orderService.getOrders(List.of(OrderStatus.PENDING))).thenReturn(orders);
         
         // Act
-        ResponseEntity<List<OrderResponse>> response = orderController.getOrders(OrderStatus.PENDING);
+        ResponseEntity<List<OrderResponse>> response = orderController.getOrders(List.of(OrderStatus.PENDING));
         
         // Assert
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
@@ -135,7 +135,7 @@ class OrderControllerTest {
         assertThat(response.getBody()).hasSize(1);
         assertThat(response.getBody().get(0).getStatus()).isEqualTo(OrderStatus.PENDING);
         
-        verify(orderService, times(1)).getOrders(OrderStatus.PENDING);
+        verify(orderService, times(1)).getOrders(List.of(OrderStatus.PENDING));
     }
     
     @Test

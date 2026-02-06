@@ -218,7 +218,7 @@ class OrderServiceTest {
         // Assert
         assertThat(responses).hasSize(2);
         verify(orderRepository).findAll();
-        verify(orderRepository, never()).findByStatus(any());
+        verify(orderRepository, never()).findByStatusIn(any());
     }
     
     @Test
@@ -227,16 +227,16 @@ class OrderServiceTest {
         Order order1 = createTestOrder(OrderStatus.PENDING);
         Order order2 = createTestOrder(OrderStatus.PENDING);
         
-        when(orderRepository.findByStatus(OrderStatus.PENDING))
+        when(orderRepository.findByStatusIn(List.of(OrderStatus.PENDING)))
                 .thenReturn(List.of(order1, order2));
         
         // Act
-        List<OrderResponse> responses = orderService.getOrders(OrderStatus.PENDING);
+        List<OrderResponse> responses = orderService.getOrders(List.of(OrderStatus.PENDING));
         
         // Assert
         assertThat(responses).hasSize(2);
         assertThat(responses).allMatch(r -> r.getStatus() == OrderStatus.PENDING);
-        verify(orderRepository).findByStatus(OrderStatus.PENDING);
+        verify(orderRepository).findByStatusIn(List.of(OrderStatus.PENDING));
         verify(orderRepository, never()).findAll();
     }
     
