@@ -1,6 +1,5 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useMutation, useQuery } from '@tanstack/react-query'
 import { listOrders, patchOrderStatus } from '@/api/orders'
 import type { Order, OrderStatus } from '@/api/contracts'
 import { ACTIVE_STATUSES, NEXT_STATUSES, STATUS_LABEL } from '@/domain/orderStatus'
@@ -13,32 +12,51 @@ export function KitchenBoardPage() {
   const navigate = useNavigate()
 
   const [statusFilter, setStatusFilter] = useState<OrderStatus[]>(ACTIVE_STATUSES)
+  const [orders, setOrders] = useState<Order[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string>('')
+  const [patching, setPatching] = useState(false)
 
-  const ordersQ = useQuery({
-    queryKey: ['kitchen-orders', statusFilter.join(',')],
-    queryFn: () => listOrders({ status: statusFilter }),
-    refetchInterval: 3_000,
-  })
+  useEffect(() => {
+    let alive = true
 
-  const patchM = useMutation({
-    mutationFn: (p: { orderId: string; newStatus: OrderStatus }) =>
-      patchOrderStatus(p.orderId, p.newStatus),
-    onSuccess: () => ordersQ.refetch(),
-  })
+    async function load() {
+      try {
+        if (!alive) return
+        setLoading(true)
+        setError('')
+        const data = await listOrders({ status: statusFilter })
+        if (!alive) return
+        setOrders(data)
+      } catch (err) {
+        if (!alive) return
+        const msg = err instanceof Error ? err.message : 'No pudimos cargar pedidos'
+        setError(msg)
+      } finally {
+        if (alive) setLoading(false)
+      }
+    }
 
-  if (ordersQ.isLoading) return <Loading label="Cargando pedidos…" />
+    load()
+    const id = window.setInterval(load, 3000)
 
-  if (ordersQ.isError) {
+    return () => {
+      alive = false
+      window.clearInterval(id)
+    }
+  }, [statusFilter])
+
+  if (loading) return <Loading label="Cargando pedidos…" />
+
+  if (error) {
     return (
       <ErrorState
         title="No pudimos cargar pedidos"
-        detail={(ordersQ.error as Error).message}
-        onRetry={() => ordersQ.refetch()}
+        detail={error}
+        onRetry={() => setStatusFilter((prev) => [...prev])}
       />
     )
   }
-
-  const orders = ordersQ.data ?? []
 
   const grouped = useMemo(() => {
     const by: Record<OrderStatus, Order[]> = {
@@ -108,10 +126,17 @@ export function KitchenBoardPage() {
                     <OrderRow
                       key={orderIdOf(o)}
                       order={o}
-                      patchPending={patchM.isPending}
-                      onChangeStatus={(newStatus) =>
-                        patchM.mutate({ orderId: orderIdOf(o), newStatus })
-                      }
+                      patchPending={patching}
+                      onChangeStatus={async (newStatus) => {
+                        try {
+                          setPatching(true)
+                          await patchOrderStatus(orderIdOf(o), newStatus)
+                          const data = await listOrders({ status: statusFilter })
+                          setOrders(data)
+                        } finally {
+                          setPatching(false)
+                        }
+                      }}
                     />
                   ))}
                 </div>
