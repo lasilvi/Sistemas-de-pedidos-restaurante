@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { listOrders, patchOrderStatus } from '@/api/orders'
 import type { Order, OrderStatus } from '@/api/contracts'
@@ -13,38 +13,53 @@ export function KitchenBoardPage() {
 
   const [statusFilter, setStatusFilter] = useState<OrderStatus[]>(ACTIVE_STATUSES)
   const [orders, setOrders] = useState<Order[]>([])
-  const [loading, setLoading] = useState(true)
+  const [initialLoading, setInitialLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState<string>('')
   const [patching, setPatching] = useState(false)
 
-  useEffect(() => {
-    let alive = true
+  const inFlightRef = useRef(false)
+  const timeoutRef = useRef<number | null>(null)
+  const mountedRef = useRef(false)
 
-    async function load() {
+  const loadOrders = useCallback(
+    async ({ block }: { block: boolean }) => {
+      if (inFlightRef.current) return
+      inFlightRef.current = true
+      if (block) setInitialLoading(true)
+      else setRefreshing(true)
+
       try {
-        if (!alive) return
-        setLoading(true)
-        setError('')
         const data = await listOrders({ status: statusFilter })
-        if (!alive) return
+        if (!mountedRef.current) return
         setOrders(data)
+        setError('')
       } catch (err) {
-        if (!alive) return
+        if (!mountedRef.current) return
         const msg = err instanceof Error ? err.message : 'No pudimos cargar pedidos'
         setError(msg)
       } finally {
-        if (alive) setLoading(false)
+        if (!mountedRef.current) return
+        inFlightRef.current = false
+        if (block) setInitialLoading(false)
+        else setRefreshing(false)
+        timeoutRef.current = window.setTimeout(() => {
+          if (mountedRef.current) loadOrders({ block: false })
+        }, 3000)
       }
-    }
+    },
+    [statusFilter],
+  )
 
-    load()
-    const id = window.setInterval(load, 3000)
-
+  useEffect(() => {
+    mountedRef.current = true
+    loadOrders({ block: true })
     return () => {
-      alive = false
-      window.clearInterval(id)
+      mountedRef.current = false
+      inFlightRef.current = false
+      if (timeoutRef.current) window.clearTimeout(timeoutRef.current)
     }
-  }, [statusFilter])
+  }, [loadOrders])
 
   const grouped = useMemo(() => {
     const by: Record<OrderStatus, Order[]> = {
@@ -56,14 +71,14 @@ export function KitchenBoardPage() {
     return by
   }, [orders])
 
-  if (loading) return <Loading label="Cargando pedidos…" />
+  if (initialLoading) return <Loading label="Cargando pedidos..." />
 
-  if (error) {
+  if (error && orders.length === 0) {
     return (
       <ErrorState
         title="No pudimos cargar pedidos"
         detail={error}
-        onRetry={() => setStatusFilter((prev) => [...prev])}
+        onRetry={() => loadOrders({ block: true })}
       />
     )
   }
@@ -76,13 +91,25 @@ export function KitchenBoardPage() {
     <div className="space-y-6">
       <SectionTitle
         title="Bandeja de cocina"
-        subtitle="Pedidos activos (refresca cada 3s)."
+        subtitle={`Pedidos activos (refresca cada 3s).${refreshing ? ' Actualizando...' : ''}`}
         right={
           <button className="btn btn-ghost cursor-pointer" onClick={() => navigate('/client/table')}>
             Ir a cliente
           </button>
         }
       />
+
+      {error && orders.length > 0 ? (
+        <div className="card flex flex-wrap items-center justify-between gap-3 p-4 text-sm text-slate-200">
+          <div>
+            <div className="font-semibold">No pudimos actualizar pedidos</div>
+            <div className="text-xs text-slate-400">{error}</div>
+          </div>
+          <button className="btn btn-ghost cursor-pointer" onClick={() => loadOrders({ block: false })}>
+            Reintentar
+          </button>
+        </div>
+      ) : null}
 
       <div className="card p-4">
         <div className="flex flex-wrap items-center gap-2">
