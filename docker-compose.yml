@@ -65,6 +65,7 @@
       context: .
       dockerfile: kitchen-worker/Dockerfile
     container_name: restaurant-kitchen-worker
+    restart: on-failure
     environment:
       DB_URL: ${DB_URL:-jdbc:postgresql://postgres:5432/restaurant_db}
       DB_USER: ${DB_USER:-restaurant_user}
@@ -78,6 +79,8 @@
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
+      order-service:
+        condition: service_started
     networks:
       - restaurant-net
 
