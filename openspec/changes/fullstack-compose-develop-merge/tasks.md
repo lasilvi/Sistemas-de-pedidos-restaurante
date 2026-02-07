@@ -14,4 +14,4 @@
 
 - [x] 3.1 Crear rama de integracion desde develop y hacer merge de feature/Backend y feature/front-integration
 - [x] 3.2 Resolver conflictos y asegurar compilacion
-- [ ] 3.3 Ejecutar smoke tests (GET /menu, POST /orders, GET /orders/{id}, UI cliente/cocina)
+- [x] 3.3 Ejecutar smoke tests (GET /menu, POST /orders, GET /orders/{id}, UI cliente/cocina)
