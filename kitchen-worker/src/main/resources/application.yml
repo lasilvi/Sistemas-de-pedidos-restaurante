@@ -2,9 +2,9 @@ spring:
   application:
     name: kitchen-worker
   datasource:
-    url: jdbc:postgresql://localhost:5434/kitchen_worker_db
-    username: restaurant_user
-    password: restaurant_pass
+    url: ${DB_URL:jdbc:postgresql://localhost:5434/kitchen_worker_db}
+    username: ${DB_USER:restaurant_user}
+    password: ${DB_PASS:restaurant_pass}
     driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:
@@ -14,10 +14,10 @@ spring:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
   rabbitmq:
-    host: localhost
-    port: 5672
-    username: guest
-    password: guest
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USER:guest}
+    password: ${RABBITMQ_PASS:guest}
     listener:
       simple:
         retry:
