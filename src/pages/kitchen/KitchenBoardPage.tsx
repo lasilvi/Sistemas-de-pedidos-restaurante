@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { listOrders, patchOrderStatus } from '@/api/orders'
 import type { Order, OrderStatus } from '@/api/contracts'
 import { ACTIVE_STATUSES, NEXT_STATUSES, STATUS_LABEL } from '@/domain/orderStatus'
+import { onOrderCreated } from '@/domain/orderEvents'
 import { SectionTitle } from '@/components/SectionTitle'
 import { Badge } from '@/components/Badge'
 import { ErrorState } from '@/components/ErrorState'
@@ -19,8 +20,8 @@ export function KitchenBoardPage() {
   const [patching, setPatching] = useState(false)
 
   const inFlightRef = useRef(false)
-  const timeoutRef = useRef<number | null>(null)
   const mountedRef = useRef(false)
+  const hasLoadedRef = useRef(false)
 
   const loadOrders = useCallback(
     async ({ block }: { block: boolean }) => {
@@ -29,36 +30,42 @@ export function KitchenBoardPage() {
       if (block) setInitialLoading(true)
       else setRefreshing(true)
 
-      try {
-        const data = await listOrders({ status: statusFilter })
-        if (!mountedRef.current) return
-        setOrders(data)
-        setError('')
+    try {
+      const data = await listOrders({ status: statusFilter })
+      if (!mountedRef.current) return
+      setOrders(data)
+      setError('')
       } catch (err) {
         if (!mountedRef.current) return
         const msg = err instanceof Error ? err.message : 'No pudimos cargar pedidos'
         setError(msg)
       } finally {
-        if (!mountedRef.current) return
-        inFlightRef.current = false
-        if (block) setInitialLoading(false)
-        else setRefreshing(false)
-        timeoutRef.current = window.setTimeout(() => {
-          if (mountedRef.current) loadOrders({ block: false })
-        }, 3000)
-      }
-    },
-    [statusFilter],
-  )
+      if (!mountedRef.current) return
+      inFlightRef.current = false
+      hasLoadedRef.current = true
+      if (block) setInitialLoading(false)
+      else setRefreshing(false)
+    }
+  },
+  [statusFilter],
+)
 
   useEffect(() => {
     mountedRef.current = true
-    loadOrders({ block: true })
     return () => {
       mountedRef.current = false
       inFlightRef.current = false
-      if (timeoutRef.current) window.clearTimeout(timeoutRef.current)
     }
+  }, [])
+
+  useEffect(() => {
+    loadOrders({ block: !hasLoadedRef.current })
+  }, [loadOrders])
+
+  useEffect(() => {
+    return onOrderCreated(() => {
+      loadOrders({ block: false })
+    })
   }, [loadOrders])
 
   const grouped = useMemo(() => {
@@ -91,7 +98,7 @@ export function KitchenBoardPage() {
     <div className="space-y-6">
       <SectionTitle
         title="Bandeja de cocina"
-        subtitle={`Pedidos activos (refresca cada 3s).${refreshing ? ' Actualizando...' : ''}`}
+        subtitle={`Pedidos activos (actualiza al recibir nuevos pedidos).${refreshing ? ' Actualizando...' : ''}`}
         right={
           <button className="btn btn-ghost cursor-pointer" onClick={() => navigate('/client/table')}>
             Ir a cliente
@@ -132,6 +139,13 @@ export function KitchenBoardPage() {
             onClick={() => setStatusFilter(ACTIVE_STATUSES)}
           >
             Reset
+          </button>
+          <button
+            className="btn btn-ghost cursor-pointer"
+            onClick={() => loadOrders({ block: false })}
+            disabled={refreshing}
+          >
+            Actualizar
           </button>
         </div>
       </div>
