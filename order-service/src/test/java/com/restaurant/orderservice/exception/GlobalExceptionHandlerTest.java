@@ -149,6 +149,27 @@ class GlobalExceptionHandlerTest {
         assertThat(response.getBody().getMessage()).isEqualTo("Database service is temporarily unavailable");
         assertThat(response.getBody().getTimestamp()).isNotNull();
     }
+
+    /**
+     * Test: EventPublicationException returns 503 Service Unavailable
+     */
+    @Test
+    void handleEventPublicationError_ReturnsServiceUnavailable() {
+        // Arrange
+        EventPublicationException exception =
+                new EventPublicationException("Unable to publish order.placed event", new RuntimeException("broker down"));
+
+        // Act
+        ResponseEntity<ErrorResponse> response = exceptionHandler.handleEventPublicationError(exception);
+
+        // Assert
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().getStatus()).isEqualTo(503);
+        assertThat(response.getBody().getError()).isEqualTo("Service Unavailable");
+        assertThat(response.getBody().getMessage()).isEqualTo("Message broker is temporarily unavailable");
+        assertThat(response.getBody().getTimestamp()).isNotNull();
+    }
     
     /**
      * Test: Generic Exception returns 500 Internal Server Error
@@ -168,7 +189,7 @@ class GlobalExceptionHandlerTest {
         assertThat(response.getBody()).isNotNull();
         assertThat(response.getBody().getStatus()).isEqualTo(500);
         assertThat(response.getBody().getError()).isEqualTo("Internal Server Error");
-        assertThat(response.getBody().getMessage()).isEqualTo("An unexpected error occurred");
+        assertThat(response.getBody().getMessage()).isEqualTo("Unexpected error");
         assertThat(response.getBody().getTimestamp()).isNotNull();
     }
 }
