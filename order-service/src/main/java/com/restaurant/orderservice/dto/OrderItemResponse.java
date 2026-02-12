@@ -30,6 +30,11 @@ public class OrderItemResponse {
     private Long productId;
     
     /**
+     * Name of the product being ordered.
+     */
+    private String productName;
+    
+    /**
      * Quantity of the product ordered.
      */
     private Integer quantity;

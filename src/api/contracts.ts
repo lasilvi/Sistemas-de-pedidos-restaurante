@@ -15,7 +15,8 @@ export type OrderItem = {
   productId: string
   quantity: number
   note?: string
-  // info extra para UI (no necesariamente viene del backend)
+  // info extra para UI (viene del backend)
+  productName?: string
   name?: string
 }
 

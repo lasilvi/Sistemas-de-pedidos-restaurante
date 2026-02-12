@@ -48,6 +48,17 @@ Nota: si se usa CLI directo, los comandos son los mismos sin el prefijo /openspe
 6. /openspec apply change docs-driven-spec (implementar cambios)
 7. /openspec verify change docs-driven-spec (verificar)
 8. /openspec archive change docs-driven-spec (cerrar el cambio)
+### 6) Demo pública temporal (Quick Tunnel)
+Cuando se necesite compartir una demo sin instalar nada:
+1. Levantar el stack con Docker Compose en develop.
+2. Crear túneles con cloudflared para backend (8080) y frontend (5173).
+3. Configurar .env con VITE_USE_MOCK=false, VITE_API_BASE_URL=<URL_BACKEND_PUBLICA>.
+4. Para demo temporal, usar VITE_ALLOWED_HOSTS=.trycloudflare.com y CORS_ALLOWED_ORIGIN_PATTERNS=https://*.trycloudflare.com.
+5. Rebuild del frontend con docker compose up -d --build frontend.
+
+**Regla de producción (main):**
+No usar mockdata (VITE_USE_MOCK=false).
+No dejar habilitados hosts/túneles temporales salvo que se documente la excepción.
 
 ### 1) Principios AIâ€‘First (no negociables)
 - **La IA es el Junior Developer**: genera boilerplate, scaffolding, pruebas base y propone integraciones.
@@ -376,5 +387,6 @@ La IA debe detenerse y preguntar cuando falte:
 
 ---
 **Ãšltima actualizaciÃ³n:** 2026-02-06
+
 
 

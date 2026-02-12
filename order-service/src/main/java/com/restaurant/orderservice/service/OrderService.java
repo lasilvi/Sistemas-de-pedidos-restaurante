@@ -271,12 +271,18 @@ public class OrderService {
      * Maps an OrderItem entity to an OrderItemResponse DTO.
      * 
      * @param orderItem The OrderItem entity to map
-     * @return OrderItemResponse DTO with order item information
+     * @return OrderItemResponse DTO with order item information including product name
      */
     private OrderItemResponse mapToOrderItemResponse(OrderItem orderItem) {
+        // Fetch product name
+        String productName = productRepository.findById(orderItem.getProductId())
+                .map(Product::getName)
+                .orElse("Producto desconocido");
+        
         return OrderItemResponse.builder()
                 .id(orderItem.getId())
                 .productId(orderItem.getProductId())
+                .productName(productName)
                 .quantity(orderItem.getQuantity())
                 .note(orderItem.getNote())
                 .build();
