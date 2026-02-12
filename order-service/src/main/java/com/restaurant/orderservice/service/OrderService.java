@@ -11,6 +11,8 @@ import com.restaurant.orderservice.exception.OrderNotFoundException;
 import com.restaurant.orderservice.exception.ProductNotFoundException;
 import com.restaurant.orderservice.repository.OrderRepository;
 import com.restaurant.orderservice.repository.ProductRepository;
+import com.restaurant.orderservice.service.command.OrderCommandExecutor;
+import com.restaurant.orderservice.service.command.PublishOrderPlacedEventCommand;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -35,6 +37,7 @@ public class OrderService {
     private final OrderRepository orderRepository;
     private final ProductRepository productRepository;
     private final OrderEventPublisher orderEventPublisher;
+    private final OrderCommandExecutor orderCommandExecutor;
     
     /**
      * Constructor for OrderService.
@@ -46,10 +49,12 @@ public class OrderService {
     @Autowired
     public OrderService(OrderRepository orderRepository, 
                        ProductRepository productRepository,
-                       OrderEventPublisher orderEventPublisher) {
+                       OrderEventPublisher orderEventPublisher,
+                       OrderCommandExecutor orderCommandExecutor) {
         this.orderRepository = orderRepository;
         this.productRepository = productRepository;
         this.orderEventPublisher = orderEventPublisher;
+        this.orderCommandExecutor = orderCommandExecutor;
     }
     
     /**
@@ -131,7 +136,7 @@ public class OrderService {
         
         // Build and publish OrderPlacedEvent
         OrderPlacedEvent event = buildOrderPlacedEvent(savedOrder);
-        orderEventPublisher.publishOrderPlacedEvent(event);
+        orderCommandExecutor.execute(new PublishOrderPlacedEventCommand(orderEventPublisher, event));
         
         // Map to OrderResponse and return
         return mapToOrderResponse(savedOrder);

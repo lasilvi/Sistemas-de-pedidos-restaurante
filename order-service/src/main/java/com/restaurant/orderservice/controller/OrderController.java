@@ -157,7 +157,7 @@ public class OrderController {
             ),
             @ApiResponse(
                     responseCode = "503",
-                    description = "Service Unavailable - Database is not accessible",
+                    description = "Service Unavailable - Database o broker de mensajeria no accesible",
                     content = @Content(
                             mediaType = "application/json",
                             schema = @Schema(implementation = ErrorResponse.class),
@@ -168,7 +168,7 @@ public class OrderController {
                                               "timestamp": "2024-01-15T10:30:00",
                                               "status": 503,
                                               "error": "Service Unavailable",
-                                              "message": "Database service is temporarily unavailable"
+                                              "message": "Message broker is temporarily unavailable"
                                             }
                                             """
                             )

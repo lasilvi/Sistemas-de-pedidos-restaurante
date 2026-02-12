@@ -1,6 +1,7 @@
 package com.restaurant.orderservice.service;
 
 import com.restaurant.orderservice.event.OrderPlacedEvent;
+import com.restaurant.orderservice.exception.EventPublicationException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Value;
@@ -33,9 +34,8 @@ public class OrderEventPublisher {
 
     /**
      * Publishes an order placed event to RabbitMQ.
-     * If publishing fails, the error is logged but no exception is thrown,
-     * ensuring that the order creation process completes successfully even if
-     * the message broker is temporarily unavailable.
+     * If publishing fails, the error is logged and a runtime exception is thrown
+     * so the caller can trigger transaction rollback.
      * 
      * @param event The OrderPlacedEvent containing order details
      */
@@ -47,7 +47,10 @@ public class OrderEventPublisher {
         } catch (Exception ex) {
             log.error("Failed to publish order.placed event: orderId={}, tableId={}, error={}", 
                     event.getOrderId(), event.getTableId(), ex.getMessage(), ex);
-            // Do not throw exception - order is already persisted
+            throw new EventPublicationException(
+                    String.format("Unable to publish order.placed event for orderId=%s", event.getOrderId()),
+                    ex
+            );
         }
     }
 }
