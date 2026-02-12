@@ -85,6 +85,10 @@ Estado: CONSOLIDADO (3 de 3 aportes integrados)
   - `order-service/src/main/java/com/restaurant/orderservice/controller/OrderController.java`
 - Impacto: operaciones de cocina sin control de acceso efectivo.
 - Fuentes: `docs/auditoria/hallazgos-nico.md#hallazgo-nico-006`
+- Aciertos identificados (fragmentos ya existentes):
+  - `src/store/kitchenAuth.ts`: ya existia almacenamiento de token en `sessionStorage`, reutilizable para guardas de ruta.
+  - `src/api/http.ts`: ya existia soporte para inyectar header de token por request.
+  - `src/api/env.ts`: ya existian variables de entorno para nombre de header, PIN y token fijo, base para alinear frontend/backend.
 
 #### H-ALTA-06 - Ausencia de capas arquitectonicas claras entre dominio/aplicacion/infraestructura
 
