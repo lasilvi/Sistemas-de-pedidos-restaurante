@@ -43,6 +43,10 @@ Estado: CONSOLIDADO (3 de 3 aportes integrados)
   - `order-service/src/main/java/com/restaurant/orderservice/service/OrderService.java:127-135`
 - Impacto: inconsistencias entre Order Service y Kitchen Worker ante fallos de broker.
 - Fuentes: `docs/auditoria/hallazgos-nico.md#hallazgo-nico-002`
+- Aciertos identificados (fragmentos ya existentes):
+  - `order-service/src/main/java/com/restaurant/orderservice/service/OrderService.java:85`: `createOrder` ya opera con `@Transactional`, base correcta para rollback transaccional.
+  - `order-service/src/main/java/com/restaurant/orderservice/service/OrderService.java:133`: el evento se construye desde la entidad persistida, evitando payload incompleto.
+  - `order-service/src/main/java/com/restaurant/orderservice/service/OrderEventPublisher.java:42`: la publicacion ya estaba encapsulada en un servicio dedicado, facilitando introducir un comando sin romper el controlador.
 
 #### H-ALTA-03 - Microservicios acoplados por base de datos/tabla compartida
 
