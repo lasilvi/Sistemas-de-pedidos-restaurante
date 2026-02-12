@@ -151,6 +151,26 @@ class GlobalExceptionHandlerTest {
     }
 
     /**
+     * Test: KitchenAccessDeniedException returns 401 Unauthorized
+     */
+    @Test
+    void handleKitchenAccessDenied_ReturnsUnauthorized() {
+        // Arrange
+        KitchenAccessDeniedException exception = new KitchenAccessDeniedException("Kitchen authentication token is required");
+
+        // Act
+        ResponseEntity<ErrorResponse> response = exceptionHandler.handleKitchenAccessDenied(exception);
+
+        // Assert
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().getStatus()).isEqualTo(401);
+        assertThat(response.getBody().getError()).isEqualTo("Unauthorized");
+        assertThat(response.getBody().getMessage()).contains("Kitchen authentication token is required");
+        assertThat(response.getBody().getTimestamp()).isNotNull();
+    }
+
+    /**
      * Test: EventPublicationException returns 503 Service Unavailable
      */
     @Test
