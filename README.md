@@ -1,151 +1,144 @@
-﻿# 🍽️ Sistema de Pedidos de Restaurante
+# Frontend - Sistema de Pedidos (MVP)
 
-Sistema completo de gestión de pedidos para restaurantes con arquitectura de microservicios, frontend React y comunicación asíncrona mediante eventos.
+Este frontend implementa:
+- **UI Cliente**: mesa -> menu -> carrito -> confirmacion -> consulta de estado.
+- **UI Cocina**: listado de pedidos + acciones de cambio de estado (modo mock sin PIN).
+
+Basado en el documento de requerimientos del MVP (2 dias).
+
+## Requisitos
+- Node.js 18+ (recomendado 20+)
+- Docker + Docker Compose (para smoke test)
+
+## Variables de entorno
+Crea un archivo `.env` (puedes copiar desde `.env.example`) si quieres preparar futura integracion
+con backend. Para modo mock no es necesario.
+
+## Ejecutar en desarrollo (hot reload)
+```bash
+npm i
+npm run dev
+```
+Abre: http://localhost:5173
+
+## Build + preview (modo "produccion local")
+```bash
+npm run build
+npm run preview
+```
+Abre: http://localhost:8080
+
+## Smoke test con Docker Compose
+1) Construir y levantar el frontend:
+```bash
+docker compose -f docker-compose.frontend.yml up -d --build
+```
+
+2) Probar que sirve HTML:
+```bash
+npm run smoke
+```
+
+3) Apagar:
+```bash
+docker compose -f docker-compose.frontend.yml down
+```
+
+## Integracion con API
+Actualmente el frontend funciona en **modo mock**, sin llamadas a endpoints externos.
+La UI usa datos en memoria y mantiene el contrato del backend:
+- Estados: `PENDING`, `IN_PREPARATION`, `READY`
+- ID de pedido: `id` (UUID)
+
+Endpoints esperados para futura integracion:
+- `GET /menu`
+- `POST /orders`
+- `GET /orders/{id}`
+- `GET /orders?status=...` (cocina)
+- `PATCH /orders/{id}/status` (cocina)
+
+La base URL se configurara con `VITE_API_BASE_URL` cuando se habilite integracion real (ver `.env.example`).
+# 🍽️ Sistema de Pedidos de Restaurante
+
+Sistema de gestión de pedidos para restaurantes implementado con arquitectura de microservicios, comunicación asíncrona mediante eventos y bases de datos separadas por servicio.
 
 ## 📋 Descripción
 
-Sistema fullstack para gestionar pedidos de restaurante que incluye:
-- **Frontend React**: Interfaz moderna para clientes y cocina (React + TypeScript + Vite + TailwindCSS)
-- **Order Service**: API REST para crear y gestionar pedidos (Spring Boot)
-- **Kitchen Worker**: Servicio de procesamiento asíncrono de pedidos (Spring Boot)
-- **RabbitMQ**: Mensajería asíncrona entre microservicios
-- **PostgreSQL**: Base de datos relacional
-- **Docker Compose**: Orquestación completa de todos los servicios
+Sistema completo para gestionar pedidos de restaurante que incluye:
+- **Order Service**: API REST para crear y gestionar pedidos
+- **Kitchen Worker**: Servicio de procesamiento asíncrono de pedidos
+- **Comunicación mediante eventos**: RabbitMQ para mensajería asíncrona
+- **Bases de datos separadas**: PostgreSQL independiente para cada servicio
 
 ## 🏗️ Arquitectura
 
+### Microservicios
+
 ```
 ┌─────────────────┐         ┌──────────────┐         ┌─────────────────┐
-│    Frontend     │────────▶│ Order Service│────────▶│   RabbitMQ      │
-│  React + Vite   │         │  (Port 8080) │         │  (Port 5672)    │
-│  (Port 5173)    │         └──────┬───────┘         └────────┬────────┘
-└─────────────────┘                │                          │
-                                   │                          │
-                                   ▼                          ▼
-                          ┌─────────────────┐       ┌─────────────────┐
-                          │   PostgreSQL    │       │ Kitchen Worker  │
-                          │  (Port 5432)    │       │  (Async Worker) │
-                          └─────────────────┘       └─────────────────┘
+│  Order Service  │────────▶│   RabbitMQ   │────────▶│ Kitchen Worker  │
+│   (Port 8080)   │         │ (Port 5672)  │         │   (Port 8081)   │
+└────────┬────────┘         └──────────────┘         └────────┬────────┘
+         │                                                     │
+         │                                                     │
+         ▼                                                     ▼
+┌─────────────────┐                                  ┌─────────────────┐
+│   PostgreSQL    │                                  │   PostgreSQL    │
+│ restaurant_db   │                                  │kitchen_worker_db│
+│   (Port 5433)   │                                  │   (Port 5434)   │
+└─────────────────┘                                  └─────────────────┘
 ```
 
-### Flujo de Datos
+### Componentes
 
-1. **Cliente** → Selecciona mesa, ve menú, agrega productos al carrito
-2. **Frontend** → Envía pedido al Order Service vía API REST
-3. **Order Service** → Guarda pedido en PostgreSQL con estado PENDING
-4. **Order Service** → Publica evento `order.placed` en RabbitMQ
-5. **Kitchen Worker** → Consume evento y actualiza pedido a IN_PREPARATION
-6. **Cocina** → Ve pedidos en tiempo real y actualiza estados
+1. **Order Service**
+   - API REST para gestión de pedidos
+   - Base de datos: `restaurant_db` (Puerto 5433)
+   - Publica eventos a RabbitMQ
+   - Documentación: Swagger UI
+
+2. **Kitchen Worker**
+   - Consumidor de eventos de RabbitMQ
+   - Base de datos: `kitchen_worker_db` (Puerto 5434)
+   - Procesa pedidos asíncronamente
+   - Actualiza estado a IN_PREPARATION
+
+3. **RabbitMQ**
+   - Broker de mensajería
+   - Puerto AMQP: 5672
+   - Management UI: 15672
+   - Dead Letter Queue para manejo de errores
+
+4. **PostgreSQL (2 instancias)**
+   - Contenedor separado por servicio
+   - Aislamiento completo de datos
+   - Patrón "Database per Service"
 
 ## 🚀 Inicio Rápido
 
-## 🌐 Demo Pública Temporal (sin instalar nada)
-
-Esta demo es **temporal** y se usa solo para mostrar el sistema a terceros. Las URLs cambian si se cierran los túneles.
-
-### Para usuarios (no técnicos)
-1. Abre la URL pública del frontend (te la comparte quien publica la demo).
-2. Selecciona mesa, crea un pedido y revisa el estado.
-3. En la parte de “Cocina” puedes ver y actualizar el estado del pedido.
-
-### Para quien publica la demo (operador)
-1. Actualiza el código y levanta el stack:
-   `git checkout develop`
-   `git pull origin develop`
-   `docker compose up -d --build`
-2. Configura variables para el demo en `.env`:
-   - `VITE_USE_MOCK=false`
-   - `VITE_API_BASE_URL=<URL_BACKEND_PUBLICA>`
-   - `VITE_ALLOWED_HOSTS=.trycloudflare.com`
-   - `CORS_ALLOWED_ORIGIN_PATTERNS=https://*.trycloudflare.com`
-3. Abre túneles (en dos terminales):
-   Backend: `cloudflared tunnel --url http://localhost:8080`
-   Frontend: `cloudflared tunnel --url http://localhost:5173`
-4. Rebuild del frontend para tomar la URL pública del backend:
-   - `docker compose up -d --build frontend`
-
-**Detener demo:**
-`docker compose down`
-Cerrar las terminales de `cloudflared`
-
-## ✅ Producción (main)
-
-En producción el sistema debe funcionar **sin mockdata**:
-`VITE_USE_MOCK=false`
-
-No dejes habilitados hosts temporales. Para producción usa tu **dominio real** y configura CORS explícito:
-`CORS_ALLOWED_ORIGIN_PATTERNS=https://tu-dominio.com`
-
 ### Prerrequisitos
 
-- **Docker Desktop** instalado y corriendo
-- **Git** para clonar el repositorio
+- Java 17+
+- Maven 3.8+
+- Docker Desktop
+- PowerShell (Windows)
 
-### Opción 1: Docker Compose (RECOMENDADO)
-
-Esta es la forma más fácil y rápida de ejecutar todo el sistema.
-
-#### 1. Clonar el repositorio
-
-```bash
-git clone https://github.com/Luis-Ospino/Sistemas-de-pedidos-restaurante.git
-cd Sistemas-de-pedidos-restaurante
-```
-
-#### 2. Configurar variables de entorno
-
-```bash
-# Linux/Mac
-cp .env.example .env
-
-# Windows PowerShell
-Copy-Item .env.example .env
-```
-
-El archivo `.env` ya viene con valores por defecto que funcionan. No necesitas modificarlo.
-
-#### 3. Iniciar todos los servicios
-
-```bash
-docker-compose up --build
-```
-
-O en modo detached (segundo plano):
-
-```bash
-docker-compose up -d --build
-```
-
-#### 4. Esperar a que todo esté listo
-
-Verás mensajes como:
-- ✅ `restaurant-postgres | database system is ready to accept connections`
-- ✅ `restaurant-rabbitmq | Server startup complete`
-- ✅ `restaurant-order-service | Started OrderServiceApplication`
-- ✅ `restaurant-kitchen-worker | Started KitchenWorkerApplication`
-- ✅ `restaurant-frontend | VITE ready in XXX ms`
-
-#### 5. Acceder a las aplicaciones
-
-- **Frontend Cliente**: http://localhost:5173
-- **Frontend Cocina**: http://localhost:5173/kitchen (PIN: 1234)
-- **API Backend**: http://localhost:8080
-- **Swagger UI**: http://localhost:8080/swagger-ui.html
-- **RabbitMQ Management**: http://localhost:15672 (guest/guest)
-
-### Opción 2: Ejecución Manual (Desarrollo)
-
-Si prefieres ejecutar los servicios individualmente para desarrollo:
-
-#### 1. Iniciar servicios de infraestructura
+### 1. Iniciar Contenedores Docker
 
 ```powershell
-# PostgreSQL
-docker run -d --name restaurant-postgres `
+# PostgreSQL para Order Service
+docker run -d --name order-service-postgres `
   -e POSTGRES_USER=restaurant_user `
   -e POSTGRES_PASSWORD=restaurant_pass `
   -e POSTGRES_DB=restaurant_db `
-  -p 5432:5432 postgres:15
+  -p 5433:5432 postgres:15
+
+# PostgreSQL para Kitchen Worker
+docker run -d --name kitchen-worker-postgres `
+  -e POSTGRES_USER=restaurant_user `
+  -e POSTGRES_PASSWORD=restaurant_pass `
+  -e POSTGRES_DB=kitchen_worker_db `
+  -p 5434:5432 postgres:15
 
 # RabbitMQ
 docker run -d --name restaurant-rabbitmq `
@@ -153,63 +146,58 @@ docker run -d --name restaurant-rabbitmq `
   -p 15672:15672 `
   rabbitmq:3-management
 
-# Esperar 10 segundos
+# Esperar a que los servicios estén listos
 timeout /t 10 /nobreak
 ```
 
-#### 2. Iniciar Order Service
-
-```powershell
-cd order-service
-mvn spring-boot:run
-```
-
-#### 3. Iniciar Kitchen Worker (nueva terminal)
+### 2. Iniciar Kitchen Worker
 
 ```powershell
 cd kitchen-worker
 mvn spring-boot:run
 ```
 
-#### 4. Iniciar Frontend (nueva terminal)
+### 3. Iniciar Order Service (en otra terminal)
 
 ```powershell
-# Instalar dependencias (solo la primera vez)
-npm install
-
-# Iniciar servidor de desarrollo
-npm run dev
+cd order-service
+mvn spring-boot:run
 ```
 
-## 📱 Uso de la Aplicación
+### 4. Verificar que todo funciona
 
-### Interfaz de Cliente
+```powershell
+# Obtener menú
+Invoke-RestMethod -Uri "http://localhost:8080/menu" -Method Get
 
-1. **Seleccionar Mesa**: Ingresa el número de mesa (1-20)
-2. **Ver Menú**: Explora los productos disponibles
-3. **Agregar al Carrito**: Selecciona productos y cantidades
-4. **Realizar Pedido**: Confirma y envía el pedido
-5. **Seguimiento**: Ve el estado de tu pedido en tiempo real
+# Crear pedido
+$body = '{"tableId": 5, "items": [{"productId": 1, "quantity": 2, "note": "Sin cebolla"}]}'
+Invoke-RestMethod -Uri "http://localhost:8080/orders" -Method Post -Body $body -ContentType "application/json"
+```
 
-### Interfaz de Cocina
+## 📚 Documentación
 
-1. **Login**: Ingresa el PIN (por defecto: 1234)
-2. **Ver Pedidos**: Lista de pedidos pendientes y en preparación
-3. **Actualizar Estado**: Marca pedidos como listos
-4. **Filtros**: Filtra por estado (Pendiente, En Preparación, Listo)
+### Swagger UI
+Accede a la documentación interactiva de la API:
+```
+http://localhost:8080/swagger-ui.html
+```
+
+### RabbitMQ Management
+Monitorea colas y mensajes:
+```
+http://localhost:15672
+Usuario: guest
+Contraseña: guest
+```
 
 ## 🔌 API Endpoints
 
-### Menú
+### Order Service (Puerto 8080)
 
 | Método | Endpoint | Descripción |
 |--------|----------|-------------|
-| GET | `/menu` | Obtener lista de productos disponibles |
-
-### Pedidos
-
-| Método | Endpoint | Descripción |
-|--------|----------|-------------|
+| GET | `/menu` | Obtener lista de productos |
 | POST | `/orders` | Crear nuevo pedido |
 | GET | `/orders` | Listar todos los pedidos |
 | GET | `/orders?status=PENDING` | Filtrar pedidos por estado |
@@ -218,14 +206,7 @@ npm run dev
 
 ### Ejemplos de Uso
 
-#### Obtener Menú
-
-```powershell
-Invoke-RestMethod -Uri "http://localhost:8080/menu" -Method Get
-```
-
 #### Crear Pedido
-
 ```powershell
 $body = @{
     tableId = 5
@@ -234,11 +215,6 @@ $body = @{
             productId = 1
             quantity = 2
             note = "Sin cebolla"
-        },
-        @{
-            productId = 3
-            quantity = 1
-            note = "Extra aderezo"
         }
     )
 } | ConvertTo-Json
@@ -250,13 +226,11 @@ Invoke-RestMethod -Uri "http://localhost:8080/orders" `
 ```
 
 #### Consultar Pedido
-
 ```powershell
 Invoke-RestMethod -Uri "http://localhost:8080/orders/{orderId}" -Method Get
 ```
 
 #### Actualizar Estado
-
 ```powershell
 $statusUpdate = @{ status = "READY" } | ConvertTo-Json
 Invoke-RestMethod -Uri "http://localhost:8080/orders/{orderId}/status" `
@@ -265,69 +239,11 @@ Invoke-RestMethod -Uri "http://localhost:8080/orders/{orderId}/status" `
   -ContentType "application/json"
 ```
 
-## 🛠️ Comandos Útiles
-
-### Docker Compose
-
-```bash
-# Ver estado de los contenedores
-docker-compose ps
-
-# Ver logs de todos los servicios
-docker-compose logs -f
-
-# Ver logs de un servicio específico
-docker-compose logs -f frontend
-docker-compose logs -f order-service
-docker-compose logs -f kitchen-worker
-
-# Reiniciar un servicio
-docker-compose restart frontend
-
-# Reiniciar todos los servicios
-docker-compose restart
-
-# Detener todos los servicios
-docker-compose down
-
-# Detener y eliminar volúmenes (limpieza completa)
-docker-compose down -v
-
-# Reconstruir e iniciar
-docker-compose up --build
-```
-
-### Verificación de RabbitMQ
-
-```bash
-# Ver colas y mensajes
-docker exec restaurant-rabbitmq rabbitmqctl list_queues name messages_ready messages_unacknowledged
-
-# Ver conexiones activas
-docker exec restaurant-rabbitmq rabbitmqctl list_connections
-
-# Ver exchanges
-docker exec restaurant-rabbitmq rabbitmqctl list_exchanges
-```
-
-### Verificación de Base de Datos
-
-```bash
-# Conectar a PostgreSQL
-docker exec -it restaurant-postgres psql -U restaurant_user -d restaurant_db
-
-# Ver pedidos
-docker exec -it restaurant-postgres psql -U restaurant_user -d restaurant_db -c "SELECT id, table_id, status, created_at FROM orders ORDER BY created_at DESC LIMIT 10;"
-
-# Ver productos
-docker exec -it restaurant-postgres psql -U restaurant_user -d restaurant_db -c "SELECT * FROM products;"
-```
-
 ## 🧪 Testing
 
-### Tests Unitarios
+### Ejecutar Tests Unitarios
 
-```bash
+```powershell
 # Order Service
 cd order-service
 mvn test
@@ -335,73 +251,16 @@ mvn test
 # Kitchen Worker
 cd kitchen-worker
 mvn test
-
-# Frontend
-npm test
 ```
 
 ### Tests Incluidos
-
 - ✅ 29 tests unitarios en Order Service
 - ✅ 9 tests unitarios en Kitchen Worker
 - ✅ Tests de controladores
 - ✅ Tests de servicios
 - ✅ Tests de manejo de excepciones
-- ✅ Property-based testing con jqwik
-
-## 🔧 Configuración
-
-### Puertos
-
-| Servicio | Puerto | Descripción |
-|----------|--------|-------------|
-| Frontend | 5173 | Aplicación React |
-| Order Service | 8080 | API REST |
-| Kitchen Worker | - | Servicio interno (sin puerto expuesto) |
-| PostgreSQL | 5432 | Base de datos |
-| RabbitMQ AMQP | 5672 | Protocolo de mensajería |
-| RabbitMQ Management | 15672 | UI de administración |
-
-### Variables de Entorno
-
-El archivo `.env` contiene todas las configuraciones necesarias:
-
-```env
-# Frontend
-VITE_USE_MOCK=false                          # Usar datos mock o API real
-VITE_API_BASE_URL=http://localhost:8080      # URL del backend
-VITE_KITCHEN_PIN=1234                        # PIN de acceso a cocina
-
-# Demo temporal (solo si usas Quick Tunnel)
-# VITE_ALLOWED_HOSTS=.trycloudflare.com
-# CORS_ALLOWED_ORIGIN_PATTERNS=https://*.trycloudflare.com
-
-# PostgreSQL
-POSTGRES_DB=restaurant_db
-POSTGRES_USER=restaurant_user
-POSTGRES_PASSWORD=restaurant_pass
-
-# Backend
-DB_URL=jdbc:postgresql://postgres:5432/restaurant_db
-DB_USER=restaurant_user
-DB_PASS=restaurant_pass
-
-# RabbitMQ
-RABBITMQ_HOST=rabbitmq
-RABBITMQ_PORT=5672
-RABBITMQ_USER=guest
-RABBITMQ_PASS=guest
-```
 
 ## 🛠️ Tecnologías
-
-### Frontend
-- **React 18**: Biblioteca de UI
-- **TypeScript**: Tipado estático
-- **Vite**: Build tool y dev server
-- **TailwindCSS**: Framework de CSS
-- **React Router**: Navegación
-- **TanStack Query**: Gestión de estado del servidor
 
 ### Backend
 - **Spring Boot 3.2.0**: Framework principal
@@ -409,7 +268,6 @@ RABBITMQ_PASS=guest
 - **Spring AMQP**: Integración con RabbitMQ
 - **Flyway**: Migraciones de base de datos
 - **Lombok**: Reducción de código boilerplate
-- **SpringDoc OpenAPI**: Documentación Swagger
 
 ### Base de Datos
 - **PostgreSQL 15**: Base de datos relacional
@@ -419,141 +277,118 @@ RABBITMQ_PASS=guest
 - **RabbitMQ 3**: Broker de mensajes
 - **Jackson**: Serialización JSON
 
+### Documentación
+- **SpringDoc OpenAPI**: Generación de documentación Swagger
+
 ### Testing
 - **JUnit 5**: Framework de testing
 - **Mockito**: Mocking
 - **jqwik**: Property-based testing
 
-### DevOps
-- **Docker**: Contenedorización
-- **Docker Compose**: Orquestación
-- **Maven**: Gestión de dependencias Java
-- **npm**: Gestión de dependencias Node.js
-
 ## 📁 Estructura del Proyecto
 
 ```
 restaurant-order-system/
-├── src/                              # Frontend React
-│   ├── api/                          # Llamadas HTTP y contratos
-│   ├── components/                   # Componentes reutilizables
-│   ├── pages/                        # Páginas de la aplicación
-│   │   ├── client/                   # Páginas del cliente
-│   │   └── kitchen/                  # Páginas de cocina
-│   ├── store/                        # Estado global (carrito, auth)
-│   ├── domain/                       # Lógica de dominio
-│   ├── App.tsx                       # Componente principal
-│   └── main.tsx                      # Punto de entrada
+├── order-service/
+│   ├── src/
+│   │   ├── main/
+│   │   │   ├── java/
+│   │   │   │   └── com/restaurant/orderservice/
+│   │   │   │       ├── config/          # Configuración
+│   │   │   │       ├── controller/      # REST Controllers
+│   │   │   │       ├── dto/             # Data Transfer Objects
+│   │   │   │       ├── entity/          # Entidades JPA
+│   │   │   │       ├── enums/           # Enumeraciones
+│   │   │   │       ├── event/           # Eventos de dominio
+│   │   │   │       ├── exception/       # Excepciones personalizadas
+│   │   │   │       ├── repository/      # Repositorios JPA
+│   │   │   │       └── service/         # Lógica de negocio
+│   │   │   └── resources/
+│   │   │       ├── db/migration/        # Migraciones Flyway
+│   │   │       └── application.yml      # Configuración
+│   │   └── test/                        # Tests unitarios
+│   └── pom.xml
 │
-├── order-service/                    # Backend Order Service
-│   ├── src/main/java/
-│   │   └── com/restaurant/orderservice/
-│   │       ├── config/               # Configuración
-│   │       ├── controller/           # REST Controllers
-│   │       ├── dto/                  # Data Transfer Objects
-│   │       ├── entity/               # Entidades JPA
-│   │       ├── enums/                # Enumeraciones
-│   │       ├── event/                # Eventos de dominio
-│   │       ├── exception/            # Excepciones personalizadas
-│   │       ├── repository/           # Repositorios JPA
-│   │       └── service/              # Lógica de negocio
-│   ├── src/main/resources/
-│   │   ├── db/migration/             # Migraciones Flyway
-│   │   └── application.yml           # Configuración
-│   └── src/test/                     # Tests unitarios
+├── kitchen-worker/
+│   ├── src/
+│   │   ├── main/
+│   │   │   ├── java/
+│   │   │   │   └── com/restaurant/kitchenworker/
+│   │   │   │       ├── config/          # Configuración RabbitMQ
+│   │   │   │       ├── entity/          # Entidades JPA
+│   │   │   │       ├── enums/           # Enumeraciones
+│   │   │   │       ├── event/           # Eventos de dominio
+│   │   │   │       ├── listener/        # Listeners de RabbitMQ
+│   │   │   │       ├── repository/      # Repositorios JPA
+│   │   │   │       └── service/         # Lógica de negocio
+│   │   │   └── resources/
+│   │   │       └── application.yml      # Configuración
+│   │   └── test/                        # Tests unitarios
+│   └── pom.xml
 │
-├── kitchen-worker/                   # Backend Kitchen Worker
-│   ├── src/main/java/
-│   │   └── com/restaurant/kitchenworker/
-│   │       ├── config/               # Configuración RabbitMQ
-│   │       ├── entity/               # Entidades JPA
-│   │       ├── listener/             # Listeners de RabbitMQ
-│   │       ├── repository/           # Repositorios JPA
-│   │       └── service/              # Lógica de negocio
-│   └── src/test/                     # Tests unitarios
-│
-├── docker-compose.yml                # Orquestación completa
-├── Dockerfile.frontend               # Dockerfile del frontend
-├── order-service/Dockerfile          # Dockerfile del order-service
-├── kitchen-worker/Dockerfile         # Dockerfile del kitchen-worker
-├── .env.example                      # Variables de entorno de ejemplo
-├── package.json                      # Dependencias frontend
-├── pom.xml                           # POM padre Maven
-└── README.md                         # Este archivo
+├── .kiro/specs/restaurant-order-system/ # Especificaciones
+├── pom.xml                               # POM padre
+└── README.md
+```
+
+## 🔧 Configuración
+
+### Puertos
+
+| Servicio | Puerto | Descripción |
+|----------|--------|-------------|
+| Order Service | 8080 | API REST |
+| Kitchen Worker | 8081 | Servicio interno |
+| PostgreSQL (Order) | 5433 | Base de datos Order Service |
+| PostgreSQL (Kitchen) | 5434 | Base de datos Kitchen Worker |
+| RabbitMQ AMQP | 5672 | Protocolo de mensajería |
+| RabbitMQ Management | 15672 | UI de administración |
+
+### Variables de Entorno
+
+Las credenciales por defecto son:
+
+```yaml
+# PostgreSQL
+POSTGRES_USER: restaurant_user
+POSTGRES_PASSWORD: restaurant_pass
+
+# RabbitMQ
+RABBITMQ_USER: guest
+RABBITMQ_PASSWORD: guest
 ```
 
 ## 🐛 Solución de Problemas
 
-### Docker Desktop no está corriendo
-
+### Error: "Cannot connect to Docker"
 ```powershell
-# Verifica que Docker Desktop esté iniciado
+# Asegúrate de que Docker Desktop está corriendo
 docker ps
 ```
 
-Si ves un error, inicia Docker Desktop desde el menú de inicio.
-
-### Puerto ya en uso
-
-```bash
+### Error: "Port already in use"
+```powershell
 # Detén los contenedores existentes
-docker-compose down
-
-# Si persiste, encuentra y detén el proceso que usa el puerto
-# Windows
-netstat -ano | findstr :8080
-taskkill /PID <PID> /F
-
-# Linux/Mac
-lsof -ti:8080 | xargs kill -9
+docker stop order-service-postgres kitchen-worker-postgres restaurant-rabbitmq
+docker rm order-service-postgres kitchen-worker-postgres restaurant-rabbitmq
 ```
 
-### Error de conexión al iniciar servicios
-
-```bash
-# Espera 10-15 segundos después de iniciar los contenedores
-# Los servicios necesitan tiempo para inicializarse
-
-# Verifica los logs
-docker-compose logs -f
+### Error: "Connection refused" al iniciar servicios
+```powershell
+# Espera 10-15 segundos después de iniciar los contenedores Docker
+timeout /t 15 /nobreak
 ```
 
-### Frontend no se conecta al backend
-
-1. Verifica que el backend esté corriendo: http://localhost:8080/menu
-2. Revisa la variable `VITE_API_BASE_URL` en `.env`
-3. Verifica que CORS esté configurado correctamente en el backend
-
-### RabbitMQ no procesa mensajes
-
-```bash
-# Verifica que RabbitMQ esté corriendo
-docker-compose logs rabbitmq
-
-# Verifica las colas
-docker exec restaurant-rabbitmq rabbitmqctl list_queues
-
-# Verifica que kitchen-worker esté conectado
-docker-compose logs kitchen-worker
-```
-
-### Limpiar todo y empezar de cero
-
-```bash
-# Detener y eliminar todo
-docker-compose down -v
-
-# Eliminar imágenes
-docker-compose down --rmi all
-
-# Reconstruir desde cero
-docker-compose up --build
+### Ver logs de contenedores
+```powershell
+docker logs order-service-postgres
+docker logs kitchen-worker-postgres
+docker logs restaurant-rabbitmq
 ```
 
 ## 📖 Documentación Adicional
 
 - [SISTEMA_FUNCIONANDO.md](SISTEMA_FUNCIONANDO.md) - Guía completa de verificación y pruebas
-- [AI_WORKFLOW.md](AI_WORKFLOW.md) - Flujo de trabajo con IA
 - [.kiro/specs/restaurant-order-system/](./kiro/specs/restaurant-order-system/) - Especificaciones técnicas detalladas
 
 ## 🤝 Contribuir
@@ -561,7 +396,7 @@ docker-compose up --build
 Este proyecto fue desarrollado siguiendo metodología Spec-Driven Development con:
 - Especificaciones formales de requisitos
 - Diseño detallado con propiedades de correctitud
-- Tests unitarios y property-based testing
+- Tests unitarios y de integración
 - Documentación completa
 
 ## 📄 Licencia
@@ -570,21 +405,44 @@ Este proyecto es un ejemplo educativo de arquitectura de microservicios.
 
 ## ✨ Características Destacadas
 
-- ✅ Arquitectura de microservicios con comunicación asíncrona
-- ✅ Frontend moderno con React + TypeScript + TailwindCSS
-- ✅ Interfaz dual: Cliente y Cocina
-- ✅ Comunicación en tiempo real mediante eventos
+- ✅ Arquitectura de microservicios con bases de datos separadas
+- ✅ Comunicación asíncrona mediante eventos
 - ✅ Dead Letter Queue para manejo de errores
 - ✅ Documentación interactiva con Swagger
 - ✅ Migraciones de base de datos con Flyway
 - ✅ Tests unitarios completos
-- ✅ Property-based testing
 - ✅ Manejo robusto de excepciones
 - ✅ Validación de datos
 - ✅ Logging estructurado
-- ✅ Docker Compose para fácil despliegue
-- ✅ Variables de entorno configurables
 
 ---
 
-**Desarrollado con ❤️ usando Spring Boot, React y arquitectura de microservicios**
+**Desarrollado con ❤️ usando Spring Boot y arquitectura de microservicios**
+
+## Docker Compose (Local)
+
+If you want to run all services with Docker Compose:
+
+```powershell
+# Start services
+docker-compose up -d
+
+# Check status
+docker-compose ps
+
+# Stop services
+docker-compose down
+```
+
+## Environment Variables (.env)
+
+Defaults for local execution are in `.env`. You can override them per machine without changing code.
+
+Key variables:
+`DB_URL`
+`DB_USER`
+`DB_PASS`
+`RABBITMQ_HOST`
+`RABBITMQ_PORT`
+`RABBITMQ_USER`
+`RABBITMQ_PASS`

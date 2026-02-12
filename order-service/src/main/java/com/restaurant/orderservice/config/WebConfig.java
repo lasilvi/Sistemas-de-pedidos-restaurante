@@ -13,22 +13,8 @@ public class WebConfig implements WebMvcConfigurer {
 
     @Override
     public void addCorsMappings(CorsRegistry registry) {
-        String patterns = System.getenv("CORS_ALLOWED_ORIGIN_PATTERNS");
-        if (patterns == null || patterns.isBlank()) {
-            registry.addMapping("/**")
-                    .allowedOrigins("http://localhost:5173", "http://127.0.0.1:5173")
-                    .allowedMethods("GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS")
-                    .allowedHeaders("*");
-            return;
-        }
-
-        String[] allowedPatterns = patterns.split(",");
-        for (int i = 0; i < allowedPatterns.length; i++) {
-            allowedPatterns[i] = allowedPatterns[i].trim();
-        }
-
         registry.addMapping("/**")
-                .allowedOriginPatterns(allowedPatterns)
+                .allowedOrigins("http://localhost:5173", "http://127.0.0.1:5173")
                 .allowedMethods("GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS")
                 .allowedHeaders("*");
     }

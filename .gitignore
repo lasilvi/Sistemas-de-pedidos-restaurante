@@ -2,7 +2,6 @@ node_modules
 dist
 .env
 .DS_Store
-
 # Maven
 target/
 pom.xml.tag
@@ -35,5 +34,7 @@ Thumbs.db
 
 # Spring Boot
 spring-boot-devtools.properties
-
-.codex/
+node_modules
+dist
+.env
+.DS_Store
