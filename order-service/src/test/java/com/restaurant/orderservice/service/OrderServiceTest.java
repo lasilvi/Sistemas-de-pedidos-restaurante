@@ -7,13 +7,14 @@ import com.restaurant.orderservice.entity.Product;
 import com.restaurant.orderservice.enums.OrderStatus;
 import com.restaurant.orderservice.exception.InvalidOrderException;
 import com.restaurant.orderservice.exception.OrderNotFoundException;
+import com.restaurant.orderservice.exception.EventPublicationException;
 import com.restaurant.orderservice.exception.ProductNotFoundException;
 import com.restaurant.orderservice.repository.OrderRepository;
 import com.restaurant.orderservice.repository.ProductRepository;
+import com.restaurant.orderservice.service.command.OrderCommandExecutor;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -42,6 +43,9 @@ class OrderServiceTest {
     
     @Mock
     private OrderEventPublisher orderEventPublisher;
+
+    @Mock
+    private OrderCommandExecutor orderCommandExecutor;
     
     @InjectMocks
     private OrderService orderService;
@@ -102,7 +106,43 @@ class OrderServiceTest {
         assertThat(response.getUpdatedAt()).isNotNull();
         
         verify(orderRepository).save(any(Order.class));
-        verify(orderEventPublisher).publishOrderPlacedEvent(any());
+        verify(orderCommandExecutor).execute(any());
+    }
+
+    @Test
+    void createOrder_whenEventPublicationFails_propagatesException() {
+        // Arrange
+        OrderItemRequest itemRequest = new OrderItemRequest(1L, 2, "No onions");
+        CreateOrderRequest request = new CreateOrderRequest(5, List.of(itemRequest));
+
+        when(productRepository.findById(1L)).thenReturn(Optional.of(activeProduct));
+
+        Order savedOrder = new Order();
+        savedOrder.setId(UUID.randomUUID());
+        savedOrder.setTableId(5);
+        savedOrder.setStatus(OrderStatus.PENDING);
+        savedOrder.setCreatedAt(LocalDateTime.now());
+        savedOrder.setUpdatedAt(LocalDateTime.now());
+
+        OrderItem orderItem = new OrderItem();
+        orderItem.setId(1L);
+        orderItem.setOrder(savedOrder);
+        orderItem.setProductId(1L);
+        orderItem.setQuantity(2);
+        orderItem.setNote("No onions");
+        savedOrder.setItems(List.of(orderItem));
+
+        when(orderRepository.save(any(Order.class))).thenReturn(savedOrder);
+        doThrow(new EventPublicationException("Broker unavailable", new RuntimeException("broker down")))
+                .when(orderCommandExecutor).execute(any());
+
+        // Act & Assert
+        assertThatThrownBy(() -> orderService.createOrder(request))
+                .isInstanceOf(EventPublicationException.class)
+                .hasMessageContaining("Broker unavailable");
+
+        verify(orderRepository).save(any(Order.class));
+        verify(orderCommandExecutor).execute(any());
     }
     
     @Test
@@ -119,7 +159,7 @@ class OrderServiceTest {
                 .hasMessageContaining("Product not found with id: 999");
         
         verify(orderRepository, never()).save(any());
-        verify(orderEventPublisher, never()).publishOrderPlacedEvent(any());
+        verify(orderCommandExecutor, never()).execute(any());
     }
     
     @Test
@@ -136,7 +176,7 @@ class OrderServiceTest {
                 .hasMessageContaining("Product not found with id: 2");
         
         verify(orderRepository, never()).save(any());
-        verify(orderEventPublisher, never()).publishOrderPlacedEvent(any());
+        verify(orderCommandExecutor, never()).execute(any());
     }
     
     @Test
