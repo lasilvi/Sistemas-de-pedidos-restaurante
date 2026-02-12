@@ -136,24 +136,6 @@ public class GlobalExceptionHandler {
     }
     
     /**
-     * Handles EventPublicationException.
-     * Returns 503 Service Unavailable when message broker operations fail.
-     *
-     * @param ex the EventPublicationException that was thrown
-     * @return ResponseEntity with ErrorResponse and 503 status
-     */
-    @ExceptionHandler(EventPublicationException.class)
-    public ResponseEntity<ErrorResponse> handleEventPublicationError(EventPublicationException ex) {
-        ErrorResponse error = ErrorResponse.builder()
-                .timestamp(LocalDateTime.now())
-                .status(HttpStatus.SERVICE_UNAVAILABLE.value())
-                .error("Service Unavailable")
-                .message("Message broker is temporarily unavailable")
-                .build();
-        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(error);
-    }
-
-    /**
      * Handles all other uncaught exceptions.
      * Returns 500 Internal Server Error for unexpected errors.
      * 
