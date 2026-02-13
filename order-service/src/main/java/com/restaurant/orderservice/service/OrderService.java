@@ -1,11 +1,12 @@
 package com.restaurant.orderservice.service;
 
 import com.restaurant.orderservice.dto.*;
+import com.restaurant.orderservice.application.port.out.OrderPlacedEventPublisherPort;
+import com.restaurant.orderservice.domain.event.OrderPlacedDomainEvent;
 import com.restaurant.orderservice.entity.Order;
 import com.restaurant.orderservice.entity.OrderItem;
 import com.restaurant.orderservice.entity.Product;
 import com.restaurant.orderservice.enums.OrderStatus;
-import com.restaurant.orderservice.event.OrderPlacedEvent;
 import com.restaurant.orderservice.exception.InvalidOrderException;
 import com.restaurant.orderservice.exception.OrderNotFoundException;
 import com.restaurant.orderservice.exception.ProductNotFoundException;
@@ -18,6 +19,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -36,7 +38,7 @@ public class OrderService {
     
     private final OrderRepository orderRepository;
     private final ProductRepository productRepository;
-    private final OrderEventPublisher orderEventPublisher;
+    private final OrderPlacedEventPublisherPort orderPlacedEventPublisherPort;
     private final OrderCommandExecutor orderCommandExecutor;
     
     /**
@@ -44,16 +46,16 @@ public class OrderService {
      * 
      * @param orderRepository Repository for accessing order data
      * @param productRepository Repository for accessing product data
-     * @param orderEventPublisher Service for publishing order events to RabbitMQ
+     * @param orderPlacedEventPublisherPort Output port for publishing order events
      */
     @Autowired
     public OrderService(OrderRepository orderRepository, 
                        ProductRepository productRepository,
-                       OrderEventPublisher orderEventPublisher,
+                       OrderPlacedEventPublisherPort orderPlacedEventPublisherPort,
                        OrderCommandExecutor orderCommandExecutor) {
         this.orderRepository = orderRepository;
         this.productRepository = productRepository;
-        this.orderEventPublisher = orderEventPublisher;
+        this.orderPlacedEventPublisherPort = orderPlacedEventPublisherPort;
         this.orderCommandExecutor = orderCommandExecutor;
     }
     
@@ -66,7 +68,7 @@ public class OrderService {
      * 3. Creates an Order entity with status PENDING
      * 4. Creates associated OrderItem entities
      * 5. Persists the order to the database
-     * 6. Publishes an OrderPlacedEvent to RabbitMQ
+     * 6. Publishes a versioned order.placed domain event to RabbitMQ
      * 7. Returns the created order as an OrderResponse
      * 
      * @param request CreateOrderRequest containing tableId and list of items
@@ -134,9 +136,9 @@ public class OrderService {
         log.info("Order created successfully: orderId={}, tableId={}, itemCount={}", 
                 savedOrder.getId(), savedOrder.getTableId(), savedOrder.getItems().size());
         
-        // Build and publish OrderPlacedEvent
-        OrderPlacedEvent event = buildOrderPlacedEvent(savedOrder);
-        orderCommandExecutor.execute(new PublishOrderPlacedEventCommand(orderEventPublisher, event));
+        // Build and publish domain event through output port
+        OrderPlacedDomainEvent event = buildOrderPlacedDomainEvent(savedOrder);
+        orderCommandExecutor.execute(new PublishOrderPlacedEventCommand(orderPlacedEventPublisherPort, event));
         
         // Map to OrderResponse and return
         return mapToOrderResponse(savedOrder);
@@ -225,25 +227,29 @@ public class OrderService {
     }
     
     /**
-     * Builds an OrderPlacedEvent from an Order entity.
+     * Builds a domain event from an Order entity.
      * 
      * @param order The Order entity to convert to an event
-     * @return OrderPlacedEvent ready to be published to RabbitMQ
+     * @return domain event ready to be published through the output port
      */
-    private OrderPlacedEvent buildOrderPlacedEvent(Order order) {
-        List<OrderPlacedEvent.OrderItemEventData> eventItems = order.getItems().stream()
-                .map(item -> new OrderPlacedEvent.OrderItemEventData(
+    private OrderPlacedDomainEvent buildOrderPlacedDomainEvent(Order order) {
+        List<OrderPlacedDomainEvent.OrderItemData> eventItems = order.getItems().stream()
+                .map(item -> new OrderPlacedDomainEvent.OrderItemData(
                         item.getProductId(),
                         item.getQuantity()
                 ))
                 .collect(Collectors.toList());
-        
-        return new OrderPlacedEvent(
-                order.getId(),
-                order.getTableId(),
-                eventItems,
-                order.getCreatedAt()
-        );
+
+        return OrderPlacedDomainEvent.builder()
+                .eventId(UUID.randomUUID())
+                .eventType(OrderPlacedDomainEvent.EVENT_TYPE)
+                .eventVersion(OrderPlacedDomainEvent.CURRENT_VERSION)
+                .occurredAt(LocalDateTime.now())
+                .orderId(order.getId())
+                .tableId(order.getTableId())
+                .items(eventItems)
+                .createdAt(order.getCreatedAt())
+                .build();
     }
     
     /**

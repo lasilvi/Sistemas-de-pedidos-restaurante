@@ -1,8 +1,8 @@
 package com.restaurant.kitchenworker.service;
 
+import com.restaurant.kitchenworker.application.command.OrderPlacedCommand;
 import com.restaurant.kitchenworker.entity.Order;
 import com.restaurant.kitchenworker.enums.OrderStatus;
-import com.restaurant.kitchenworker.event.OrderPlacedEvent;
 import com.restaurant.kitchenworker.repository.OrderRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -12,7 +12,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -40,19 +39,19 @@ class OrderProcessingServiceTest {
     private OrderProcessingService orderProcessingService;
     
     private UUID orderId;
-    private OrderPlacedEvent event;
+    private OrderPlacedCommand command;
     private Order order;
     
     @BeforeEach
     void setUp() {
         orderId = UUID.randomUUID();
         
-        // Create a sample event
-        event = new OrderPlacedEvent();
-        event.setOrderId(orderId);
-        event.setTableId(5);
-        event.setItems(new ArrayList<>());
-        event.setCreatedAt(LocalDateTime.now());
+        // Create a sample command
+        command = OrderPlacedCommand.builder()
+                .orderId(orderId)
+                .tableId(5)
+                .createdAt(LocalDateTime.now())
+                .build();
         
         // Create a sample order
         order = new Order();
@@ -75,7 +74,7 @@ class OrderProcessingServiceTest {
         when(orderRepository.save(any(Order.class))).thenAnswer(invocation -> invocation.getArgument(0));
         
         // Act
-        orderProcessingService.processOrder(event);
+        orderProcessingService.processOrder(command);
         
         // Assert
         verify(orderRepository).findById(orderId);
@@ -92,13 +91,14 @@ class OrderProcessingServiceTest {
     void processOrder_WithNonExistentOrderId_DoesNotThrowException() {
         // Arrange
         when(orderRepository.findById(orderId)).thenReturn(Optional.empty());
+        when(orderRepository.save(any(Order.class))).thenAnswer(invocation -> invocation.getArgument(0));
         
         // Act & Assert - should not throw exception
-        orderProcessingService.processOrder(event);
+        orderProcessingService.processOrder(command);
         
-        // Verify that findById was called but save was not
+        // Verify that findById was called and the service persisted a local projection
         verify(orderRepository).findById(orderId);
-        verify(orderRepository, never()).save(any(Order.class));
+        verify(orderRepository).save(any(Order.class));
     }
     
     /**
@@ -113,7 +113,7 @@ class OrderProcessingServiceTest {
         when(orderRepository.save(any(Order.class))).thenAnswer(invocation -> invocation.getArgument(0));
         
         // Act
-        orderProcessingService.processOrder(event);
+        orderProcessingService.processOrder(command);
         
         // Assert
         verify(orderRepository).save(order);
@@ -131,7 +131,7 @@ class OrderProcessingServiceTest {
         when(orderRepository.findById(orderId)).thenThrow(new RuntimeException("Database error"));
         
         // Act & Assert
-        assertThatThrownBy(() -> orderProcessingService.processOrder(event))
+        assertThatThrownBy(() -> orderProcessingService.processOrder(command))
             .isInstanceOf(RuntimeException.class)
             .hasMessage("Database error");
         
@@ -152,7 +152,7 @@ class OrderProcessingServiceTest {
         when(orderRepository.save(any(Order.class))).thenThrow(new RuntimeException("Save failed"));
         
         // Act & Assert
-        assertThatThrownBy(() -> orderProcessingService.processOrder(event))
+        assertThatThrownBy(() -> orderProcessingService.processOrder(command))
             .isInstanceOf(RuntimeException.class)
             .hasMessage("Save failed");
         

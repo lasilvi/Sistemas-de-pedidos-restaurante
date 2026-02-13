@@ -1,5 +1,6 @@
 package com.restaurant.orderservice.service;
 
+import com.restaurant.orderservice.application.port.out.OrderPlacedEventPublisherPort;
 import com.restaurant.orderservice.dto.*;
 import com.restaurant.orderservice.entity.Order;
 import com.restaurant.orderservice.entity.OrderItem;
@@ -42,7 +43,7 @@ class OrderServiceTest {
     private ProductRepository productRepository;
     
     @Mock
-    private OrderEventPublisher orderEventPublisher;
+    private OrderPlacedEventPublisherPort orderPlacedEventPublisherPort;
 
     @Mock
     private OrderCommandExecutor orderCommandExecutor;

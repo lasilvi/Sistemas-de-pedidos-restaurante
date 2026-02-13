@@ -2,9 +2,9 @@
   application:
     name: kitchen-worker
   datasource:
-    url: ${DB_URL:jdbc:postgresql://localhost:5432/restaurant_db}
-    username: ${DB_USER:restaurant_user}
-    password: ${DB_PASS:restaurant_pass}
+    url: ${KITCHEN_DB_URL:jdbc:postgresql://localhost:5433/kitchen_db}
+    username: ${KITCHEN_DB_USER:kitchen_user}
+    password: ${KITCHEN_DB_PASS:kitchen_pass}
     driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:
@@ -26,6 +26,10 @@
           max-attempts: 3
           multiplier: 2.0
           max-interval: 10000
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
 
 server:
   port: 8081

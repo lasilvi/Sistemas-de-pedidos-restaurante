@@ -1,6 +1,9 @@
 package com.restaurant.kitchenworker.listener;
 
+import com.restaurant.kitchenworker.application.command.OrderPlacedCommand;
 import com.restaurant.kitchenworker.event.OrderPlacedEvent;
+import com.restaurant.kitchenworker.event.OrderPlacedEventValidator;
+import com.restaurant.kitchenworker.exception.UnsupportedEventVersionException;
 import com.restaurant.kitchenworker.service.OrderProcessingService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -8,12 +11,14 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.amqp.AmqpRejectAndDontRequeueException;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.*;
 
 /**
@@ -29,6 +34,9 @@ class OrderEventListenerTest {
     
     @Mock
     private OrderProcessingService orderProcessingService;
+
+    @Mock
+    private OrderPlacedEventValidator eventValidator;
     
     @InjectMocks
     private OrderEventListener orderEventListener;
@@ -45,8 +53,19 @@ class OrderEventListenerTest {
         List<OrderPlacedEvent.OrderItemEventData> items = new ArrayList<>();
         items.add(new OrderPlacedEvent.OrderItemEventData(1L, 2));
         items.add(new OrderPlacedEvent.OrderItemEventData(2L, 1));
-        
-        testEvent = new OrderPlacedEvent(orderId, tableId, items, createdAt);
+
+        testEvent = OrderPlacedEvent.builder()
+                .eventId(UUID.randomUUID())
+                .eventType("order.placed")
+                .eventVersion(1)
+                .occurredAt(LocalDateTime.now())
+                .payload(OrderPlacedEvent.Payload.builder()
+                        .orderId(orderId)
+                        .tableId(tableId)
+                        .items(items)
+                        .createdAt(createdAt)
+                        .build())
+                .build();
     }
     
     /**
@@ -58,13 +77,15 @@ class OrderEventListenerTest {
     @Test
     void handleOrderPlacedEvent_ShouldCallOrderProcessingService() {
         // Arrange
-        doNothing().when(orderProcessingService).processOrder(testEvent);
+        doNothing().when(eventValidator).validate(testEvent);
+        doNothing().when(orderProcessingService).processOrder(any(OrderPlacedCommand.class));
         
         // Act
         orderEventListener.handleOrderPlacedEvent(testEvent);
         
         // Assert
-        verify(orderProcessingService, times(1)).processOrder(testEvent);
+        verify(eventValidator, times(1)).validate(testEvent);
+        verify(orderProcessingService, times(1)).processOrder(any(OrderPlacedCommand.class));
     }
     
     /**
@@ -75,17 +96,17 @@ class OrderEventListenerTest {
     @Test
     void handleOrderPlacedEvent_ShouldDeserializeEventCorrectly() {
         // Arrange
-        doNothing().when(orderProcessingService).processOrder(any(OrderPlacedEvent.class));
+        doNothing().when(eventValidator).validate(testEvent);
+        doNothing().when(orderProcessingService).processOrder(any(OrderPlacedCommand.class));
         
         // Act
         orderEventListener.handleOrderPlacedEvent(testEvent);
         
         // Assert - verify the event passed to the service has the correct data
-        verify(orderProcessingService).processOrder(argThat(event ->
-            event.getOrderId().equals(testEvent.getOrderId()) &&
-            event.getTableId().equals(testEvent.getTableId()) &&
-            event.getItems().size() == 2 &&
-            event.getCreatedAt().equals(testEvent.getCreatedAt())
+        verify(orderProcessingService).processOrder(argThat(command ->
+            command.getOrderId().equals(testEvent.resolveOrderId()) &&
+            command.getTableId().equals(testEvent.resolveTableId()) &&
+            command.getCreatedAt().equals(testEvent.resolveCreatedAt())
         ));
     }
     
@@ -99,14 +120,24 @@ class OrderEventListenerTest {
     void handleOrderPlacedEvent_ShouldPropagateExceptions() {
         // Arrange
         RuntimeException testException = new RuntimeException("Processing failed");
-        doThrow(testException).when(orderProcessingService).processOrder(testEvent);
+        doNothing().when(eventValidator).validate(testEvent);
+        doThrow(testException).when(orderProcessingService).processOrder(any(OrderPlacedCommand.class));
         
         // Act & Assert
-        try {
-            orderEventListener.handleOrderPlacedEvent(testEvent);
-        } catch (RuntimeException e) {
-            // Exception should be propagated to trigger retry
-            verify(orderProcessingService, times(1)).processOrder(testEvent);
-        }
+        assertThatThrownBy(() -> orderEventListener.handleOrderPlacedEvent(testEvent))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessage("Processing failed");
+
+        verify(orderProcessingService, times(1)).processOrder(any(OrderPlacedCommand.class));
+    }
+
+    @Test
+    void handleOrderPlacedEvent_WithUnsupportedVersion_ShouldRejectWithoutRequeue() {
+        doThrow(new UnsupportedEventVersionException(2)).when(eventValidator).validate(testEvent);
+
+        assertThatThrownBy(() -> orderEventListener.handleOrderPlacedEvent(testEvent))
+                .isInstanceOf(AmqpRejectAndDontRequeueException.class);
+
+        verify(orderProcessingService, never()).processOrder(any(OrderPlacedCommand.class));
     }
 }
