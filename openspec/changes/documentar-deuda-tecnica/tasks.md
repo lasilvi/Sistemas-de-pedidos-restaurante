@@ -19,5 +19,5 @@
 ## 4. Validacion y cierre
 
 - [x] 4.1 Ejecutar revision final de legibilidad y consistencia (terminologia, estados, fechas, owners).
-- [ ] 4.2 Preparar commit y push de documentacion en la rama de trabajo.
-- [ ] 4.3 Crear PR a `develop` con resumen de cambios y checklist de validacion de Fase 5.
+- [x] 4.2 Preparar commit y push de documentacion en la rama de trabajo.
+- [x] 4.3 Crear PR a `develop` con resumen de cambios y checklist de validacion de Fase 5.
