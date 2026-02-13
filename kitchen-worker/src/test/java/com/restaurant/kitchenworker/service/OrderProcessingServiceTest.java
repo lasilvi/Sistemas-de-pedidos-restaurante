@@ -92,13 +92,14 @@ class OrderProcessingServiceTest {
     void processOrder_WithNonExistentOrderId_DoesNotThrowException() {
         // Arrange
         when(orderRepository.findById(orderId)).thenReturn(Optional.empty());
+        when(orderRepository.save(any(Order.class))).thenAnswer(invocation -> invocation.getArgument(0));
         
         // Act & Assert - should not throw exception
         orderProcessingService.processOrder(event);
         
-        // Verify that findById was called but save was not
+        // Verify that findById was called and the service persisted a local projection
         verify(orderRepository).findById(orderId);
-        verify(orderRepository, never()).save(any(Order.class));
+        verify(orderRepository).save(any(Order.class));
     }
     
     /**
