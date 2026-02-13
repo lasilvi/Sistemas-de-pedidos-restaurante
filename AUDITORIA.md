@@ -130,6 +130,12 @@ Estado: CONSOLIDADO (3 de 3 aportes integrados)
   - `src/pages/kitchen/KitchenBoardPage.tsx:183-248`
 - Impacto: fragilidad ante cambios y mayor riesgo de regresion UI/estado.
 - Fuentes: `docs/auditoria/hallazgos-nico.md#hallazgo-nico-007`
+- Aciertos identificados (fragmentos ya existentes):
+  - `src/pages/kitchen/KitchenBoardPage.tsx:23-31`: ya existia control de concurrencia (`inFlightRef`) para evitar solapamiento de polling.
+  - `src/pages/kitchen/KitchenBoardPage.tsx:66-73`: ya existia limpieza explicita de recursos (`clearTimeout`) al desmontar.
+  - `src/pages/kitchen/KitchenBoardPage.tsx:76-84`: ya existia agrupacion memoizada por estado (`useMemo`) evitando recalculo en cada render.
+- Evidencia de implementacion:
+  - `docs/auditoria/EVIDENCIA_H-MEDIA-02.md`
 
 #### H-MEDIA-03 - Contrato de evento y modelo de integracion con baja resiliencia
 
@@ -181,7 +187,7 @@ Estado: CONSOLIDADO (3 de 3 aportes integrados)
 - H-ALTA-01 -> Facade (orquestacion de creacion de orden) + Strategy (validaciones de entrada).
 - H-ALTA-02 -> Outbox pattern + Retry policy explicita.
 - H-ALTA-03 -> Anti-Corruption Layer / Event-carried state transfer.
-- H-MEDIA-02 -> Observer/Strategy para transiciones y polling desacoplado.
+- H-MEDIA-02 -> Facade + Command para desacoplar orquestacion de cocina y acciones de dominio UI.
 
 ## Mapeo hacia Fase 3 (entry points de refactor)
 
