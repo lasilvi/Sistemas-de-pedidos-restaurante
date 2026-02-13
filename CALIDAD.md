@@ -780,6 +780,20 @@ useEffect(() => {
 
 ---
 
+## Integracion con Deuda Tecnica (Fase 5)
+
+Para evitar reincidencia de incidentes, los hallazgos de calidad se gestionan tambien como deuda tecnica trazable.
+
+Reglas operativas:
+1. Cada hallazgo abierto o parcialmente mitigado debe tener un `DT-*` en `DEUDA_TECNICA.md`.
+2. En cada sprint review se revisan estado, owner, trigger y fecha objetivo de los `DT-*` de calidad.
+3. Ninguna deuda de impacto alto se cierra sin evidencia tecnica enlazada en PR/documentacion.
+4. Si un item pasa a `POSTERGADA`, se documenta justificacion y nueva fecha objetivo.
+
+Referencia cruzada:
+- Registro de deuda: `DEUDA_TECNICA.md`
+- Hallazgos consolidados: `AUDITORIA.md`
+
 ## Conclusión
 
 ### Resumen del Incidente
