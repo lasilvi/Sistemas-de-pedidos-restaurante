@@ -32,6 +32,7 @@ Estado: CONSOLIDADO (3 de 3 aportes integrados) + EJECUCION DOCUMENTADA
   - `order-service/src/main/java/com/restaurant/orderservice/service/OrderService.java:250-284`
 - Impacto: eleva costo de cambio y puede degradar rendimiento en consultas de pedidos con muchos items.
 - Fuentes: `docs/auditoria/hallazgos-nico.md#hallazgo-nico-001`
+- Deuda tecnica asociada: `DT-001` (`PAGADA`) en `DEUDA_TECNICA.md`.
 - Evidencia de implementacion:
   - `docs/refactor/H-ALTA-01-SRP-REFACTOR.md`
   - `docs/refactor/H-ALTA-01-COMPLETION-SUMMARY.md`
@@ -46,6 +47,7 @@ Estado: CONSOLIDADO (3 de 3 aportes integrados) + EJECUCION DOCUMENTADA
   - `order-service/src/main/java/com/restaurant/orderservice/service/OrderService.java:127-135`
 - Impacto: inconsistencias entre Order Service y Kitchen Worker ante fallos de broker.
 - Fuentes: `docs/auditoria/hallazgos-nico.md#hallazgo-nico-002`
+- Deuda tecnica asociada: `DT-004` (`PAGADA`) en `DEUDA_TECNICA.md`.
 - Evidencia de implementacion:
   - `docs/auditoria/EVIDENCIA_H-ALTA-02.md`
 - Aciertos identificados (fragmentos ya existentes):
@@ -64,6 +66,7 @@ Estado: CONSOLIDADO (3 de 3 aportes integrados) + EJECUCION DOCUMENTADA
   - `kitchen-worker/src/main/java/com/restaurant/kitchenworker/entity/Order.java:21-23`
 - Impacto: migraciones acopladas, riesgo de regresiones cruzadas, menor autonomia de despliegue.
 - Fuentes: `docs/auditoria/hallazgos-nico.md#hallazgo-nico-004`
+- Deuda tecnica asociada: `DT-005` (`PAGADA`) en `DEUDA_TECNICA.md`.
 - Evidencia de implementacion:
   - `docs/auditoria/EVIDENCIA_H-ALTA-03.md`
 
@@ -79,6 +82,7 @@ Estado: CONSOLIDADO (3 de 3 aportes integrados) + EJECUCION DOCUMENTADA
   - `order-service/src/main/java/com/restaurant/orderservice/dto/OrderItemRequest.java:19`
 - Impacto: potenciales errores 400 en entorno real y deuda de conversiones ad-hoc.
 - Fuentes: `docs/auditoria/hallazgos-nico.md#hallazgo-nico-005`
+- Deuda tecnica asociada: `DT-002` (`PAGADA`) en `DEUDA_TECNICA.md`.
 - Evidencia de implementacion:
   - `docs/refactor/H-ALTA-04-PRODUCTID-TYPE-FIX.md`
   - `docs/refactor/H-ALTA-04-COMPLETION-SUMMARY.md`
@@ -95,6 +99,7 @@ Estado: CONSOLIDADO (3 de 3 aportes integrados) + EJECUCION DOCUMENTADA
   - `order-service/src/main/java/com/restaurant/orderservice/controller/OrderController.java`
 - Impacto: operaciones de cocina sin control de acceso efectivo.
 - Fuentes: `docs/auditoria/hallazgos-nico.md#hallazgo-nico-006`
+- Deuda tecnica asociada: `DT-006` (`PAGADA`) en `DEUDA_TECNICA.md`.
 - Evidencia de implementacion:
   - `docs/auditoria/EVIDENCIA_H-ALTA-05.md`
 - Aciertos identificados (fragmentos ya existentes):
@@ -112,6 +117,7 @@ Estado: CONSOLIDADO (3 de 3 aportes integrados) + EJECUCION DOCUMENTADA
   - `docs/auditoria/hallazgos-luis.md` (hallazgos H-01, H-04, H-07)
 - Impacto: incrementa acoplamiento transversal y costo de evolucion.
 - Fuentes: `docs/auditoria/hallazgos-companero-1.md`, `docs/auditoria/hallazgos-luis.md`
+- Deuda tecnica asociada: `DT-007` (`PAGADA`) en `DEUDA_TECNICA.md`.
 - Evidencia de implementacion:
   - `docs/auditoria/EVIDENCIA_H-ALTA-06.md`
 
@@ -127,6 +133,7 @@ Estado: CONSOLIDADO (3 de 3 aportes integrados) + EJECUCION DOCUMENTADA
   - `kitchen-worker/src/main/java/com/restaurant/kitchenworker/service/OrderProcessingService.java:27-28`
 - Impacto: menor testabilidad y mayor acoplamiento al contenedor.
 - Fuentes: `docs/auditoria/hallazgos-nico.md#hallazgo-nico-003`
+- Deuda tecnica asociada: `DT-003` (`PAGADA`) en `DEUDA_TECNICA.md`.
 
 #### H-MEDIA-02 - KitchenBoardPage concentra demasiadas responsabilidades
 
@@ -140,6 +147,7 @@ Estado: CONSOLIDADO (3 de 3 aportes integrados) + EJECUCION DOCUMENTADA
   - `src/pages/kitchen/KitchenBoardPage.tsx:183-248`
 - Impacto: fragilidad ante cambios y mayor riesgo de regresion UI/estado.
 - Fuentes: `docs/auditoria/hallazgos-nico.md#hallazgo-nico-007`
+- Deuda tecnica asociada: `DT-008` (`PAGADA`) en `DEUDA_TECNICA.md`.
 - Evidencia de implementacion:
   - `docs/auditoria/EVIDENCIA_H-MEDIA-02.md`
 - Aciertos identificados (fragmentos ya existentes):
@@ -159,6 +167,7 @@ Estado: CONSOLIDADO (3 de 3 aportes integrados) + EJECUCION DOCUMENTADA
   - `docs/auditoria/hallazgos-companero-1.md` (1.5, 2.3)
 - Impacto: riesgo de inconsistencia entre servicios cuando falla el broker o evoluciona el payload.
 - Fuentes: `docs/auditoria/hallazgos-luis.md`, `docs/auditoria/hallazgos-companero-1.md`
+- Deuda tecnica asociada: `DT-009` (`PAGADA`) en `DEUDA_TECNICA.md`.
 - Evidencia de implementacion:
   - `docs/auditoria/EVIDENCIA_H-MEDIA-03.md`
 
@@ -174,6 +183,7 @@ Estado: CONSOLIDADO (3 de 3 aportes integrados) + EJECUCION DOCUMENTADA
   - `AI_WORKFLOW.md:2-4`
 - Impacto: ruido operativo y errores de uso para nuevos colaboradores.
 - Fuentes: `docs/auditoria/hallazgos-nico.md#hallazgo-nico-008`
+- Deuda tecnica asociada: `DT-010` (`PENDIENTE`) en `DEUDA_TECNICA.md`.
 
 #### H-BAJA-02 - Brechas de calidad no funcional (observabilidad, cobertura, hardening)
 
@@ -185,6 +195,7 @@ Estado: CONSOLIDADO (3 de 3 aportes integrados) + EJECUCION DOCUMENTADA
   - `docs/auditoria/hallazgos-luis.md` (hallazgos de calidad no funcional)
 - Impacto: deteccion tardia de incidentes y mayor riesgo operativo en crecimiento.
 - Fuentes: `docs/auditoria/hallazgos-companero-1.md`, `docs/auditoria/hallazgos-luis.md`
+- Deuda tecnica asociada: `DT-011` (`PENDIENTE`) en `DEUDA_TECNICA.md`.
 
 ## Deduplicacion aplicada
 
