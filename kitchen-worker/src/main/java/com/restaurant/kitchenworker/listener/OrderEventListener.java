@@ -6,6 +6,7 @@ import com.restaurant.kitchenworker.event.OrderPlacedEventValidator;
 import com.restaurant.kitchenworker.exception.InvalidEventContractException;
 import com.restaurant.kitchenworker.exception.UnsupportedEventVersionException;
 import com.restaurant.kitchenworker.service.OrderProcessingService;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.AmqpRejectAndDontRequeueException;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
@@ -29,16 +30,11 @@ import org.springframework.stereotype.Component;
  */
 @Component
 @Slf4j
+@RequiredArgsConstructor
 public class OrderEventListener {
 
     private final OrderProcessingService orderProcessingService;
     private final OrderPlacedEventValidator eventValidator;
-
-    public OrderEventListener(OrderProcessingService orderProcessingService,
-                              OrderPlacedEventValidator eventValidator) {
-        this.orderProcessingService = orderProcessingService;
-        this.eventValidator = eventValidator;
-    }
     
     /**
      * Handles incoming order placed events from RabbitMQ.

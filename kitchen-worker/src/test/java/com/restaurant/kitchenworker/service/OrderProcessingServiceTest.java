@@ -83,7 +83,7 @@ class OrderProcessingServiceTest {
     }
     
     /**
-     * Test: processOrder with non-existent orderId does not throw exception
+     * Test: processOrder with non-existent orderId creates new order
      * 
      * Validates Requirements: 7.6
      */
@@ -96,7 +96,7 @@ class OrderProcessingServiceTest {
         // Act & Assert - should not throw exception
         orderProcessingService.processOrder(command);
         
-        // Verify that findById was called and the service persisted a local projection
+        // Verify that findById was called and a new order was saved
         verify(orderRepository).findById(orderId);
         verify(orderRepository).save(any(Order.class));
     }
