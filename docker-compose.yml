@@ -18,6 +18,25 @@
     networks:
       - restaurant-net
 
+  kitchen-postgres:
+    image: postgres:15
+    container_name: kitchen-postgres
+    environment:
+      POSTGRES_DB: ${KITCHEN_POSTGRES_DB:-kitchen_db}
+      POSTGRES_USER: ${KITCHEN_POSTGRES_USER:-kitchen_user}
+      POSTGRES_PASSWORD: ${KITCHEN_POSTGRES_PASSWORD:-kitchen_pass}
+    ports:
+      - "5433:5432"
+    volumes:
+      - kitchen_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${KITCHEN_POSTGRES_USER:-kitchen_user} -d ${KITCHEN_POSTGRES_DB:-kitchen_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - restaurant-net
+
   rabbitmq:
     image: rabbitmq:3-management
     container_name: restaurant-rabbitmq
@@ -67,15 +86,15 @@
     container_name: restaurant-kitchen-worker
     restart: on-failure
     environment:
-      DB_URL: ${DB_URL:-jdbc:postgresql://postgres:5432/restaurant_db}
-      DB_USER: ${DB_USER:-restaurant_user}
-      DB_PASS: ${DB_PASS:-restaurant_pass}
+      KITCHEN_DB_URL: ${KITCHEN_DB_URL:-jdbc:postgresql://kitchen-postgres:5432/kitchen_db}
+      KITCHEN_DB_USER: ${KITCHEN_DB_USER:-kitchen_user}
+      KITCHEN_DB_PASS: ${KITCHEN_DB_PASS:-kitchen_pass}
       RABBITMQ_HOST: ${RABBITMQ_HOST:-rabbitmq}
       RABBITMQ_PORT: ${RABBITMQ_PORT:-5672}
       RABBITMQ_USER: ${RABBITMQ_USER:-guest}
       RABBITMQ_PASS: ${RABBITMQ_PASS:-guest}
     depends_on:
-      postgres:
+      kitchen-postgres:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
@@ -104,6 +123,7 @@
 
 volumes:
   postgres_data:
+  kitchen_postgres_data:
   rabbitmq_data:
 
 networks:

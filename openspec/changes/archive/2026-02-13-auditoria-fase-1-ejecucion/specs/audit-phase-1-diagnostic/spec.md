@@ -1,8 +1,5 @@
-# audit-phase-1-diagnostic Specification
+## MODIFIED Requirements
 
-## Purpose
-TBD - created by archiving change auditoria-fase-1-diagnostico. Update Purpose after archive.
-## Requirements
 ### Requirement: Diagnostic audit scope is defined
 El equipo SHALL ejecutar la auditoria de Fase 1 sobre al menos backend, frontend y puntos de integracion para identificar antipatrones del estado post-MVP, y SHALL mapear cada hallazgo critico/medio a una accion de mitigacion implementable.
 
@@ -35,4 +32,3 @@ El equipo SHALL clasificar cada hallazgo por severidad e impacto en mantenibilid
 #### Scenario: Mitigation status is tracked
 - **WHEN** una solucion se implementa en fase de ejecucion
 - **THEN** el hallazgo incluye trazabilidad a commits/archivos de evidencia que muestran su mitigacion
-

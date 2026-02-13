@@ -1,10 +1,14 @@
 package com.restaurant.kitchenworker.listener;
 
+import com.restaurant.kitchenworker.application.command.OrderPlacedCommand;
 import com.restaurant.kitchenworker.event.OrderPlacedEvent;
+import com.restaurant.kitchenworker.event.OrderPlacedEventValidator;
+import com.restaurant.kitchenworker.exception.InvalidEventContractException;
+import com.restaurant.kitchenworker.exception.UnsupportedEventVersionException;
 import com.restaurant.kitchenworker.service.OrderProcessingService;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.amqp.AmqpRejectAndDontRequeueException;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 /**
@@ -26,9 +30,15 @@ import org.springframework.stereotype.Component;
 @Component
 @Slf4j
 public class OrderEventListener {
-    
-    @Autowired
-    private OrderProcessingService orderProcessingService;
+
+    private final OrderProcessingService orderProcessingService;
+    private final OrderPlacedEventValidator eventValidator;
+
+    public OrderEventListener(OrderProcessingService orderProcessingService,
+                              OrderPlacedEventValidator eventValidator) {
+        this.orderProcessingService = orderProcessingService;
+        this.eventValidator = eventValidator;
+    }
     
     /**
      * Handles incoming order placed events from RabbitMQ.
@@ -39,15 +49,15 @@ public class OrderEventListener {
      * 
      * Processing flow:
      * 1. Receive and deserialize the OrderPlacedEvent from the queue
-     * 2. Log the received event for monitoring and debugging
+     * 2. Validate contract/version and map to application command
      * 3. Delegate processing to OrderProcessingService
      * 4. If processing succeeds, the message is acknowledged
      * 5. If processing fails, the exception triggers the retry mechanism
      * 
      * Error handling:
-     * - Exceptions thrown by OrderProcessingService will trigger message retry
+     * - Contract/version errors are rejected without requeue to move directly to DLQ
+     * - Processing errors are rethrown to trigger configured retries
      * - After max retry attempts, the message is routed to the Dead Letter Queue
-     * - Messages with non-existent orders are acknowledged without retry
      * 
      * @param event The OrderPlacedEvent deserialized from the queue message
      * 
@@ -57,10 +67,27 @@ public class OrderEventListener {
      */
     @RabbitListener(queues = "${rabbitmq.queue.name}")
     public void handleOrderPlacedEvent(OrderPlacedEvent event) {
-        log.info("Received order placed event from queue: orderId={}, tableId={}", 
-            event.getOrderId(), event.getTableId());
-        
-        // Delegate processing to the service layer
-        orderProcessingService.processOrder(event);
+        log.info(
+                "Received order placed event from queue: eventId={}, orderId={}, tableId={}, version={}",
+                event.getEventId(),
+                event.resolveOrderId(),
+                event.resolveTableId(),
+                event.resolveVersion()
+        );
+
+        try {
+            eventValidator.validate(event);
+
+            OrderPlacedCommand command = OrderPlacedCommand.builder()
+                    .orderId(event.resolveOrderId())
+                    .tableId(event.resolveTableId())
+                    .createdAt(event.resolveCreatedAt())
+                    .build();
+
+            orderProcessingService.processOrder(command);
+        } catch (InvalidEventContractException | UnsupportedEventVersionException ex) {
+            log.error("Rejecting invalid order.placed event: {}", ex.getMessage());
+            throw new AmqpRejectAndDontRequeueException(ex.getMessage(), ex);
+        }
     }
 }

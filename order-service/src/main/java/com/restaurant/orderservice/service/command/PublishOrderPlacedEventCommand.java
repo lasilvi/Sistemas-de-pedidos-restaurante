@@ -1,23 +1,24 @@
 package com.restaurant.orderservice.service.command;
 
-import com.restaurant.orderservice.event.OrderPlacedEvent;
-import com.restaurant.orderservice.service.OrderEventPublisher;
+import com.restaurant.orderservice.application.port.out.OrderPlacedEventPublisherPort;
+import com.restaurant.orderservice.domain.event.OrderPlacedDomainEvent;
 
 /**
  * Concrete command that publishes an order.placed event.
  */
 public class PublishOrderPlacedEventCommand implements OrderCommand {
 
-    private final OrderEventPublisher orderEventPublisher;
-    private final OrderPlacedEvent event;
+    private final OrderPlacedEventPublisherPort orderPlacedEventPublisherPort;
+    private final OrderPlacedDomainEvent event;
 
-    public PublishOrderPlacedEventCommand(OrderEventPublisher orderEventPublisher, OrderPlacedEvent event) {
-        this.orderEventPublisher = orderEventPublisher;
+    public PublishOrderPlacedEventCommand(OrderPlacedEventPublisherPort orderPlacedEventPublisherPort,
+                                          OrderPlacedDomainEvent event) {
+        this.orderPlacedEventPublisherPort = orderPlacedEventPublisherPort;
         this.event = event;
     }
 
     @Override
     public void execute() {
-        orderEventPublisher.publishOrderPlacedEvent(event);
+        orderPlacedEventPublisherPort.publish(event);
     }
 }

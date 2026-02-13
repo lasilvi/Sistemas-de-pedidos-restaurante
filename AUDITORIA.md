@@ -5,7 +5,7 @@ Estado: CONSOLIDADO (3 de 3 aportes integrados)
 ## Baseline y contexto
 
 - Snapshot base post-MVP: `51b8f5d` (`audit: snapshot post-mvp`)
-- Rama de trabajo actual: `feature/auditoria-fase-1-diagnostico`
+- Rama de trabajo actual: `feature/auditoria-fase-1-ejecucion`
 - Alcance oficial: `docs/auditoria/ALCANCE_FASE1.md` (solo lectura)
 - Fuentes individuales:
   - `docs/auditoria/hallazgos-nico.md`
@@ -59,6 +59,8 @@ Estado: CONSOLIDADO (3 de 3 aportes integrados)
   - `kitchen-worker/src/main/java/com/restaurant/kitchenworker/entity/Order.java:21-23`
 - Impacto: migraciones acopladas, riesgo de regresiones cruzadas, menor autonomia de despliegue.
 - Fuentes: `docs/auditoria/hallazgos-nico.md#hallazgo-nico-004`
+- Evidencia de implementacion:
+  - `docs/auditoria/EVIDENCIA_H-ALTA-03.md`
 
 #### H-ALTA-04 - Contrato tipo `productId` inconsistente entre frontend y backend
 
@@ -100,6 +102,8 @@ Estado: CONSOLIDADO (3 de 3 aportes integrados)
   - `docs/auditoria/hallazgos-luis.md` (hallazgos H-01, H-04, H-07)
 - Impacto: incrementa acoplamiento transversal y costo de evolucion.
 - Fuentes: `docs/auditoria/hallazgos-companero-1.md`, `docs/auditoria/hallazgos-luis.md`
+- Evidencia de implementacion:
+  - `docs/auditoria/EVIDENCIA_H-ALTA-06.md`
 
 ### Severidad Media
 
@@ -137,6 +141,8 @@ Estado: CONSOLIDADO (3 de 3 aportes integrados)
   - `docs/auditoria/hallazgos-companero-1.md` (1.5, 2.3)
 - Impacto: riesgo de inconsistencia entre servicios cuando falla el broker o evoluciona el payload.
 - Fuentes: `docs/auditoria/hallazgos-luis.md`, `docs/auditoria/hallazgos-companero-1.md`
+- Evidencia de implementacion:
+  - `docs/auditoria/EVIDENCIA_H-MEDIA-03.md`
 
 ### Severidad Baja
 
@@ -180,9 +186,10 @@ Estado: CONSOLIDADO (3 de 3 aportes integrados)
 ## Mapeo hacia Fase 3 (entry points de refactor)
 
 - `order-service/src/main/java/com/restaurant/orderservice/service/OrderService.java`
-- `order-service/src/main/java/com/restaurant/orderservice/service/OrderEventPublisher.java`
+- `order-service/src/main/java/com/restaurant/orderservice/infrastructure/messaging/RabbitOrderPlacedEventPublisher.java`
 - `kitchen-worker/src/main/java/com/restaurant/kitchenworker/listener/OrderEventListener.java`
 - `kitchen-worker/src/main/java/com/restaurant/kitchenworker/service/OrderProcessingService.java`
+- `kitchen-worker/src/main/java/com/restaurant/kitchenworker/event/OrderPlacedEventValidator.java`
 - `src/pages/kitchen/KitchenBoardPage.tsx`
 - `src/api/contracts.ts`
 - `src/pages/client/CartPage.tsx`

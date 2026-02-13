@@ -19,7 +19,7 @@ import java.util.UUID;
  * Validates Requirements: 7.4, 9.4
  */
 @Entity
-@Table(name = "orders")
+@Table(name = "kitchen_orders")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor

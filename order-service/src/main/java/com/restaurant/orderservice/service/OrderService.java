@@ -1,11 +1,12 @@
 package com.restaurant.orderservice.service;
 
 import com.restaurant.orderservice.dto.*;
+import com.restaurant.orderservice.application.port.out.OrderPlacedEventPublisherPort;
+import com.restaurant.orderservice.domain.event.OrderPlacedDomainEvent;
 import com.restaurant.orderservice.entity.Order;
 import com.restaurant.orderservice.entity.OrderItem;
 import com.restaurant.orderservice.entity.Product;
 import com.restaurant.orderservice.enums.OrderStatus;
-import com.restaurant.orderservice.event.OrderPlacedEvent;
 import com.restaurant.orderservice.exception.InvalidOrderException;
 import com.restaurant.orderservice.exception.OrderNotFoundException;
 import com.restaurant.orderservice.exception.ProductNotFoundException;
@@ -17,6 +18,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
