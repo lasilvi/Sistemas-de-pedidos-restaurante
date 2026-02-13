@@ -1,77 +1,27 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { listOrders, patchOrderStatus } from '@/api/orders'
-import { HttpError } from '@/api/http'
 import type { Order, OrderStatus } from '@/api/contracts'
 import { ACTIVE_STATUSES, NEXT_STATUSES, STATUS_LABEL } from '@/domain/orderStatus'
-import { clearKitchenToken, getKitchenToken } from '@/store/kitchenAuth'
 import { SectionTitle } from '@/components/SectionTitle'
 import { Badge } from '@/components/Badge'
 import { ErrorState } from '@/components/ErrorState'
 import { Loading } from '@/components/Loading'
+import { useKitchenBoardController } from '@/pages/kitchen/useKitchenBoardController'
 
 export function KitchenBoardPage() {
   const navigate = useNavigate()
-
-  const [statusFilter, setStatusFilter] = useState<OrderStatus[]>(ACTIVE_STATUSES)
-  const [orders, setOrders] = useState<Order[]>([])
-  const [initialLoading, setInitialLoading] = useState(true)
-  const [refreshing, setRefreshing] = useState(false)
-  const [error, setError] = useState<string>('')
-  const [patching, setPatching] = useState(false)
-
-  const inFlightRef = useRef(false)
-  const timeoutRef = useRef<number | null>(null)
-  const mountedRef = useRef(false)
-
-  const loadOrders = useCallback(
-    async ({ block }: { block: boolean }) => {
-      if (inFlightRef.current) return
-      inFlightRef.current = true
-      if (block) setInitialLoading(true)
-      else setRefreshing(true)
-
-      try {
-        const kitchenToken = getKitchenToken()
-        if (!kitchenToken) {
-          navigate('/kitchen', { replace: true })
-          return
-        }
-        const data = await listOrders({ status: statusFilter })
-        if (!mountedRef.current) return
-        setOrders(data)
-        setError('')
-      } catch (err) {
-        if (err instanceof HttpError && err.status === 401) {
-          clearKitchenToken()
-          navigate('/kitchen', { replace: true })
-          return
-        }
-        if (!mountedRef.current) return
-        const msg = err instanceof Error ? err.message : 'No pudimos cargar pedidos'
-        setError(msg)
-      } finally {
-        if (!mountedRef.current) return
-        inFlightRef.current = false
-        if (block) setInitialLoading(false)
-        else setRefreshing(false)
-        timeoutRef.current = window.setTimeout(() => {
-          if (mountedRef.current) loadOrders({ block: false })
-        }, 3000)
-      }
-    },
-    [navigate, statusFilter],
-  )
-
-  useEffect(() => {
-    mountedRef.current = true
-    loadOrders({ block: true })
-    return () => {
-      mountedRef.current = false
-      inFlightRef.current = false
-      if (timeoutRef.current) window.clearTimeout(timeoutRef.current)
-    }
-  }, [loadOrders])
+  const {
+    statusFilter,
+    setStatusFilter,
+    orders,
+    initialLoading,
+    refreshing,
+    error,
+    patching,
+    loadOrders,
+    changeOrderStatus,
+    logout,
+  } = useKitchenBoardController(navigate)
 
   const grouped = useMemo(() => {
     const by: Record<OrderStatus, Order[]> = {
@@ -111,10 +61,7 @@ export function KitchenBoardPage() {
             </button>
             <button
               className="btn btn-ghost cursor-pointer"
-              onClick={() => {
-                clearKitchenToken()
-                navigate('/kitchen', { replace: true })
-              }}
+              onClick={logout}
             >
               Cerrar sesion
             </button>
@@ -178,21 +125,7 @@ export function KitchenBoardPage() {
                       order={o}
                       patchPending={patching}
                       onChangeStatus={async (newStatus) => {
-                        try {
-                          setPatching(true)
-                          await patchOrderStatus(orderIdOf(o), newStatus)
-                          const data = await listOrders({ status: statusFilter })
-                          setOrders(data)
-                        } catch (err) {
-                          if (err instanceof HttpError && err.status === 401) {
-                            clearKitchenToken()
-                            navigate('/kitchen', { replace: true })
-                            return
-                          }
-                          throw err
-                        } finally {
-                          setPatching(false)
-                        }
+                        await changeOrderStatus(orderIdOf(o), newStatus)
                       }}
                     />
                   ))}
