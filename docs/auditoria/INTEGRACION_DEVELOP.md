@@ -3,7 +3,7 @@
 **Fecha:** 2026-02-13
 **Rama de trabajo:** `feature/auditoria-fase-1-ejecucion`
 **Rama objetivo:** `develop`
-**Estado:** EN PREPARACION DE PR
+**Estado:** PR CREADO
 
 ---
 
@@ -22,7 +22,7 @@
 - `c906e0b` `refactor(kitchen-worker): convert field injection to constructor injection (H-MEDIA-01)`
 
 ### Commits solo en `feature/auditoria-fase-1-ejecucion`
-- (Previo a este commit no habia commits exclusivos; los ajustes de esta integracion se agregan en el commit actual.)
+- `b46a235` `chore(auditoria): cerrar preparacion de merge a develop`
 
 ### Alcance exacto esperado del PR
 - Mitigacion de `H-MEDIA-02` (Facade + Command para cocina) y su evidencia.
@@ -34,6 +34,8 @@
 - **Base:** `develop`
 - **Compare:** `feature/auditoria-fase-1-ejecucion`
 - **Titulo sugerido:** `chore(auditoria): integrar ejecucion fase 1 a develop y alinear evidencias`
+- **URL directa:** `https://github.com/Luis-Ospino/Sistemas-de-pedidos-restaurante/compare/develop...feature/auditoria-fase-1-ejecucion?expand=1`
+- **PR creado:** `https://github.com/Luis-Ospino/Sistemas-de-pedidos-restaurante/pull/37`
 
 ## 4. Checklist de validacion pre-merge
 

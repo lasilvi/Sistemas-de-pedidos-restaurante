@@ -18,6 +18,6 @@
 
 ## 4. Integracion a develop
 
-- [ ] 4.1 Commit/push de ajustes finales en `feature/auditoria-fase-1-ejecucion`.
-- [ ] 4.2 Crear PR con `base: develop` y `compare: feature/auditoria-fase-1-ejecucion` incluyendo checklist de validacion.
+- [x] 4.1 Commit/push de ajustes finales en `feature/auditoria-fase-1-ejecucion`.
+- [x] 4.2 Crear PR con `base: develop` y `compare: feature/auditoria-fase-1-ejecucion` incluyendo checklist de validacion.
 - [x] 4.3 Definir y documentar plan de rollback (revert de merge commit) y pasos post-merge para actualizar local `develop`.
