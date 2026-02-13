@@ -342,12 +342,15 @@ npm test
 
 ### Tests Incluidos
 
-- ✅ 29 tests unitarios en Order Service
-- ✅ 9 tests unitarios en Kitchen Worker
+- ✅ 40+ tests unitarios (Order Service + Kitchen Worker)
 - ✅ Tests de controladores
 - ✅ Tests de servicios
 - ✅ Tests de manejo de excepciones
 - ✅ Property-based testing con jqwik
+- ✅ Tests de integración (API, BD, RabbitMQ)
+- ✅ Tests funcionales End-to-End
+
+**📋 Para documentación completa de pruebas de calidad, ver [CALIDAD.md](CALIDAD.md)**
 
 ## 🔧 Configuración
 
@@ -552,7 +555,10 @@ docker-compose up --build
 
 ## 📖 Documentación Adicional
 
+- **[CALIDAD.md](CALIDAD.md)** - 📋 Documentación completa de pruebas de calidad en todos los niveles
 - [SISTEMA_FUNCIONANDO.md](SISTEMA_FUNCIONANDO.md) - Guía completa de verificación y pruebas
+- [EVIDECIAS_PRUEBAS.md](EVIDECIAS_PRUEBAS.md) - Evidencias de pruebas ejecutadas
+- [AUDITORIA.md](AUDITORIA.md) - Reporte de auditoría de código y hallazgos
 - [AI_WORKFLOW.md](AI_WORKFLOW.md) - Flujo de trabajo con IA
 - [.kiro/specs/restaurant-order-system/](./kiro/specs/restaurant-order-system/) - Especificaciones técnicas detalladas
 
