@@ -1,51 +1,49 @@
-﻿import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ChefHat, Lock } from 'lucide-react'
-import { motion } from 'motion/react'
 import { ENV } from '@/api/env'
-import { ThemeToggle } from '@/components/ThemeToggle'
-import { Card } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { useToast } from '@/components/ui/toast'
-import { getKitchenToken, issueKitchenToken, setKitchenToken } from '@/store/kitchenAuth'
+import { setKitchenToken } from '@/store/kitchenAuth'
+import { SectionTitle } from '@/components/SectionTitle'
 
 export function KitchenLoginPage() {
   const navigate = useNavigate()
-  const { toast } = useToast()
-  const [password, setPassword] = useState('')
-  const [loading, setLoading] = useState(false)
+  const [pin, setPin] = useState('')
+  const [error, setError] = useState('')
 
-  useEffect(() => {
-    if (getKitchenToken()) navigate('/kitchen/board', { replace: true })
-  }, [navigate])
-
-  function handleLogin(event: React.FormEvent) {
-    event.preventDefault()
-    setLoading(true)
-
-    window.setTimeout(() => {
-      if (password.trim() === ENV.KITCHEN_PIN) {
-        const token = ENV.KITCHEN_FIXED_TOKEN || issueKitchenToken()
-        setKitchenToken(token)
-        toast({ title: 'Inicio de sesion exitoso', tone: 'success' })
-        navigate('/kitchen/board', { replace: true })
-      } else {
-        toast({
-          title: 'PIN incorrecto',
-          description: 'Verifica el PIN e intenta de nuevo.',
-          tone: 'danger',
-        })
-        setLoading(false)
-      }
-    }, 500)
+  function submit() {
+    if (pin !== ENV.KITCHEN_PIN) {
+      setError('PIN de cocina invalido')
+      return
+    }
+    const token = ENV.KITCHEN_FIXED_TOKEN || pin
+    setKitchenToken(token)
+    setError('')
+    navigate('/kitchen/board', { replace: true })
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="glass-topbar">
-        <div className="page-wrap flex justify-end py-4">
-          <ThemeToggle />
+    <div className="space-y-6">
+      <SectionTitle
+        title="Cocina"
+        subtitle="Ingresa el PIN para habilitar acciones de cocina."
+      />
+
+      <div className="card space-y-4 p-6">
+        <label className="block text-sm text-slate-300" htmlFor="kitchen-pin">
+          PIN de cocina
+        </label>
+        <input
+          id="kitchen-pin"
+          type="password"
+          value={pin}
+          onChange={(e) => setPin(e.target.value)}
+          className="w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-slate-100"
+          placeholder="Ingresa PIN"
+        />
+        {error ? <div className="text-sm text-rose-400">{error}</div> : null}
+        <div className="flex items-center justify-end">
+          <button className="btn btn-primary cursor-pointer" onClick={submit}>
+            Entrar a cocina
+          </button>
         </div>
       </header>
 

@@ -96,7 +96,7 @@ class OrderProcessingServiceTest {
         // Act & Assert - should not throw exception
         orderProcessingService.processOrder(command);
         
-        // Verify that findById was called and a new order was saved
+        // Verify that findById was called and the service persisted a local projection
         verify(orderRepository).findById(orderId);
         verify(orderRepository).save(any(Order.class));
     }

@@ -35,6 +35,12 @@ public class OrderEventListener {
 
     private final OrderProcessingService orderProcessingService;
     private final OrderPlacedEventValidator eventValidator;
+
+    public OrderEventListener(OrderProcessingService orderProcessingService,
+                              OrderPlacedEventValidator eventValidator) {
+        this.orderProcessingService = orderProcessingService;
+        this.eventValidator = eventValidator;
+    }
     
     /**
      * Handles incoming order placed events from RabbitMQ.

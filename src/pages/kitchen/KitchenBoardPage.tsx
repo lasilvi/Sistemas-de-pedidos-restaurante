@@ -5,12 +5,13 @@ import { ChefHat, Clock, LogOut } from 'lucide-react'
 import { motion } from 'motion/react'
 import { getMenu } from '@/api/menu'
 import { listOrders, patchOrderStatus } from '@/api/orders'
+import { HttpError } from '@/api/http'
 import type { Order, OrderStatus } from '@/api/contracts'
-import { buildProductNameMap, resolveOrderItemName } from '@/domain/productLabel'
-import { ACTIVE_STATUSES, NEXT_STATUS, PREVIOUS_STATUS, STATUS_LABEL } from '@/domain/orderStatus'
+import { ACTIVE_STATUSES, NEXT_STATUSES, STATUS_LABEL } from '@/domain/orderStatus'
 import { clearKitchenToken, getKitchenToken } from '@/store/kitchenAuth'
-import { useApp } from '@/app/context'
-import { ThemeToggle } from '@/components/ThemeToggle'
+import { SectionTitle } from '@/components/SectionTitle'
+import { Badge } from '@/components/Badge'
+import { ErrorState } from '@/components/ErrorState'
 import { Loading } from '@/components/Loading'
 import { ErrorState } from '@/components/ErrorState'
 import { Card } from '@/components/ui/card'
@@ -66,11 +67,21 @@ export function KitchenBoardPage() {
       else setRefreshing(true)
 
       try {
-        const data = await listOrders({ status: ACTIVE_STATUSES }, token)
+        const kitchenToken = getKitchenToken()
+        if (!kitchenToken) {
+          navigate('/kitchen', { replace: true })
+          return
+        }
+        const data = await listOrders({ status: statusFilter })
         if (!mountedRef.current) return
         setOrders(data)
         setError('')
       } catch (err) {
+        if (err instanceof HttpError && err.status === 401) {
+          clearKitchenToken()
+          navigate('/kitchen', { replace: true })
+          return
+        }
         if (!mountedRef.current) return
         setError(err instanceof Error ? err.message : 'No pudimos cargar pedidos')
       } finally {
@@ -85,7 +96,7 @@ export function KitchenBoardPage() {
         }
       }
     },
-    [token],
+    [navigate, statusFilter],
   )
 
   useEffect(() => {
@@ -152,30 +163,59 @@ export function KitchenBoardPage() {
     navigate('/kitchen', { replace: true })
   }
 
-  if (initialLoading) return <Loading label="Cargando bandeja de cocina..." />
+  return (
+    <div className="space-y-6">
+      <SectionTitle
+        title="Bandeja de cocina"
+        subtitle={`Pedidos activos (refresca cada 3s).${refreshing ? ' Actualizando...' : ''}`}
+        right={
+          <div className="flex items-center gap-2">
+            <button className="btn btn-ghost cursor-pointer" onClick={() => navigate('/client/table')}>
+              Ir a cliente
+            </button>
+            <button
+              className="btn btn-ghost cursor-pointer"
+              onClick={() => {
+                clearKitchenToken()
+                navigate('/kitchen', { replace: true })
+              }}
+            >
+              Cerrar sesion
+            </button>
+          </div>
+        }
+      />
 
   if (error && orders.length === 0) {
     return <ErrorState title="No pudimos cargar pedidos" detail={error} onRetry={() => loadOrders({ block: true })} />
   }
 
-  const activeOrders = orders
-
-  return (
-    <div className="min-h-screen bg-background">
-      <header className="glass-topbar">
-        <div className="page-wrap py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="rounded-xl bg-accent p-2 text-accent-foreground">
-                <ChefHat className="h-6 w-6" />
-              </div>
-              <div>
-                <h1 className="text-3xl font-medium">Bandeja de cocina</h1>
-                <p className="text-sm text-muted-foreground">
-                  {activeOrders.length} pedido{activeOrders.length !== 1 ? 's' : ''} activo
-                  {activeOrders.length !== 1 ? 's' : ''}
-                  {refreshing ? ' · actualizando...' : ''}
-                </p>
+                <div className="space-y-3">
+                  {grouped[status].map((o) => (
+                    <OrderRow
+                      key={orderIdOf(o)}
+                      order={o}
+                      patchPending={patching}
+                      onChangeStatus={async (newStatus) => {
+                        try {
+                          setPatching(true)
+                          await patchOrderStatus(orderIdOf(o), newStatus)
+                          const data = await listOrders({ status: statusFilter })
+                          setOrders(data)
+                        } catch (err) {
+                          if (err instanceof HttpError && err.status === 401) {
+                            clearKitchenToken()
+                            navigate('/kitchen', { replace: true })
+                            return
+                          }
+                          throw err
+                        } finally {
+                          setPatching(false)
+                        }
+                      }}
+                    />
+                  ))}
+                </div>
               </div>
             </div>
             <div className="flex items-center gap-2">

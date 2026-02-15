@@ -6,8 +6,10 @@ import com.restaurant.orderservice.domain.event.OrderPlacedDomainEvent;
 import com.restaurant.orderservice.entity.Order;
 import com.restaurant.orderservice.entity.OrderItem;
 import com.restaurant.orderservice.enums.OrderStatus;
+import com.restaurant.orderservice.exception.InvalidOrderException;
 import com.restaurant.orderservice.exception.OrderNotFoundException;
 import com.restaurant.orderservice.repository.OrderRepository;
+import com.restaurant.orderservice.repository.ProductRepository;
 import com.restaurant.orderservice.service.command.OrderCommandExecutor;
 import com.restaurant.orderservice.service.command.PublishOrderPlacedEventCommand;
 import lombok.extern.slf4j.Slf4j;
@@ -15,6 +17,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -36,9 +39,7 @@ import java.util.stream.Collectors;
 public class OrderService {
     
     private final OrderRepository orderRepository;
-    private final OrderValidator orderValidator;
-    private final OrderMapper orderMapper;
-    private final OrderEventBuilder orderEventBuilder;
+    private final ProductRepository productRepository;
     private final OrderPlacedEventPublisherPort orderPlacedEventPublisherPort;
     private final OrderCommandExecutor orderCommandExecutor;
     
@@ -46,22 +47,16 @@ public class OrderService {
      * Constructor for OrderService.
      * 
      * @param orderRepository Repository for accessing order data
-     * @param orderValidator Validator for order business rules
-     * @param orderMapper Mapper for entity-DTO conversions
-     * @param orderEventBuilder Builder for order events
+     * @param productRepository Repository for accessing product data
      * @param orderPlacedEventPublisherPort Output port for publishing order events
      */
     @Autowired
-    public OrderService(OrderRepository orderRepository,
-                       OrderValidator orderValidator,
-                       OrderMapper orderMapper,
-                       OrderEventBuilder orderEventBuilder,
+    public OrderService(OrderRepository orderRepository, 
+                       ProductRepository productRepository,
                        OrderPlacedEventPublisherPort orderPlacedEventPublisherPort,
                        OrderCommandExecutor orderCommandExecutor) {
         this.orderRepository = orderRepository;
-        this.orderValidator = orderValidator;
-        this.orderMapper = orderMapper;
-        this.orderEventBuilder = orderEventBuilder;
+        this.productRepository = productRepository;
         this.orderPlacedEventPublisherPort = orderPlacedEventPublisherPort;
         this.orderCommandExecutor = orderCommandExecutor;
     }
@@ -69,7 +64,14 @@ public class OrderService {
     /**
      * Creates a new order with the specified items for a table.
      * 
-     * Orchestrates the order creation process by delegating to specialized components.
+     * This method performs the following operations:
+     * 1. Validates that all referenced products exist and are active
+     * 2. Validates that tableId is valid and items list is not empty
+     * 3. Creates an Order entity with status PENDING
+     * 4. Creates associated OrderItem entities
+     * 5. Persists the order to the database
+     * 6. Publishes a versioned order.placed domain event to RabbitMQ
+     * 7. Returns the created order as an OrderResponse
      * 
      * @param request CreateOrderRequest containing tableId and list of items
      * @return OrderResponse with the created order details
@@ -119,8 +121,8 @@ public class OrderService {
         log.info("Order created successfully: orderId={}, tableId={}, itemCount={}", 
                 savedOrder.getId(), savedOrder.getTableId(), savedOrder.getItems().size());
         
-        // Delegate event building and publishing via command
-        OrderPlacedDomainEvent event = orderEventBuilder.buildOrderPlacedEvent(savedOrder);
+        // Build and publish domain event through output port
+        OrderPlacedDomainEvent event = buildOrderPlacedDomainEvent(savedOrder);
         orderCommandExecutor.execute(new PublishOrderPlacedEventCommand(orderPlacedEventPublisherPort, event));
         
         // Delegate mapping to OrderMapper
@@ -206,7 +208,74 @@ public class OrderService {
         log.info("Order status updated successfully: orderId={}, status={}", 
                 updatedOrder.getId(), updatedOrder.getStatus());
         
-        // Delegate mapping to OrderMapper
-        return orderMapper.mapToOrderResponse(updatedOrder);
+        return mapToOrderResponse(updatedOrder);
+    }
+    
+    /**
+     * Builds a domain event from an Order entity.
+     * 
+     * @param order The Order entity to convert to an event
+     * @return domain event ready to be published through the output port
+     */
+    private OrderPlacedDomainEvent buildOrderPlacedDomainEvent(Order order) {
+        List<OrderPlacedDomainEvent.OrderItemData> eventItems = order.getItems().stream()
+                .map(item -> new OrderPlacedDomainEvent.OrderItemData(
+                        item.getProductId(),
+                        item.getQuantity()
+                ))
+                .collect(Collectors.toList());
+
+        return OrderPlacedDomainEvent.builder()
+                .eventId(UUID.randomUUID())
+                .eventType(OrderPlacedDomainEvent.EVENT_TYPE)
+                .eventVersion(OrderPlacedDomainEvent.CURRENT_VERSION)
+                .occurredAt(LocalDateTime.now())
+                .orderId(order.getId())
+                .tableId(order.getTableId())
+                .items(eventItems)
+                .createdAt(order.getCreatedAt())
+                .build();
+    }
+    
+    /**
+     * Maps an Order entity to an OrderResponse DTO.
+     * 
+     * @param order The Order entity to map
+     * @return OrderResponse DTO with complete order information
+     */
+    private OrderResponse mapToOrderResponse(Order order) {
+        List<OrderItemResponse> itemResponses = order.getItems().stream()
+                .map(this::mapToOrderItemResponse)
+                .collect(Collectors.toList());
+        
+        return OrderResponse.builder()
+                .id(order.getId())
+                .tableId(order.getTableId())
+                .status(order.getStatus())
+                .items(itemResponses)
+                .createdAt(order.getCreatedAt())
+                .updatedAt(order.getUpdatedAt())
+                .build();
+    }
+    
+    /**
+     * Maps an OrderItem entity to an OrderItemResponse DTO.
+     * 
+     * @param orderItem The OrderItem entity to map
+     * @return OrderItemResponse DTO with order item information including product name
+     */
+    private OrderItemResponse mapToOrderItemResponse(OrderItem orderItem) {
+        // Fetch product name
+        String productName = productRepository.findById(orderItem.getProductId())
+                .map(Product::getName)
+                .orElse("Producto desconocido");
+        
+        return OrderItemResponse.builder()
+                .id(orderItem.getId())
+                .productId(orderItem.getProductId())
+                .productName(productName)
+                .quantity(orderItem.getQuantity())
+                .note(orderItem.getNote())
+                .build();
     }
 }

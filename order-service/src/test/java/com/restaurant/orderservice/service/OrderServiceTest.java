@@ -49,15 +49,6 @@ class OrderServiceTest {
     @Mock
     private OrderCommandExecutor orderCommandExecutor;
     
-    @Mock
-    private OrderValidator orderValidator;
-    
-    @Mock
-    private OrderMapper orderMapper;
-    
-    @Mock
-    private OrderEventBuilder orderEventBuilder;
-    
     @InjectMocks
     private OrderService orderService;
     
@@ -175,7 +166,42 @@ class OrderServiceTest {
 
         verify(orderValidator).validateCreateOrderRequest(request);
         verify(orderRepository).save(any(Order.class));
-        verify(orderEventBuilder).buildOrderPlacedEvent(savedOrder);
+        verify(orderCommandExecutor).execute(any());
+    }
+
+    @Test
+    void createOrder_whenEventPublicationFails_propagatesException() {
+        // Arrange
+        OrderItemRequest itemRequest = new OrderItemRequest(1L, 2, "No onions");
+        CreateOrderRequest request = new CreateOrderRequest(5, List.of(itemRequest));
+
+        when(productRepository.findById(1L)).thenReturn(Optional.of(activeProduct));
+
+        Order savedOrder = new Order();
+        savedOrder.setId(UUID.randomUUID());
+        savedOrder.setTableId(5);
+        savedOrder.setStatus(OrderStatus.PENDING);
+        savedOrder.setCreatedAt(LocalDateTime.now());
+        savedOrder.setUpdatedAt(LocalDateTime.now());
+
+        OrderItem orderItem = new OrderItem();
+        orderItem.setId(1L);
+        orderItem.setOrder(savedOrder);
+        orderItem.setProductId(1L);
+        orderItem.setQuantity(2);
+        orderItem.setNote("No onions");
+        savedOrder.setItems(List.of(orderItem));
+
+        when(orderRepository.save(any(Order.class))).thenReturn(savedOrder);
+        doThrow(new EventPublicationException("Broker unavailable", new RuntimeException("broker down")))
+                .when(orderCommandExecutor).execute(any());
+
+        // Act & Assert
+        assertThatThrownBy(() -> orderService.createOrder(request))
+                .isInstanceOf(EventPublicationException.class)
+                .hasMessageContaining("Broker unavailable");
+
+        verify(orderRepository).save(any(Order.class));
         verify(orderCommandExecutor).execute(any());
     }
     
