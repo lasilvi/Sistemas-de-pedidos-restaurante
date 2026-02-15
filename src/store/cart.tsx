@@ -2,7 +2,7 @@
 import type { Product } from '@/api/contracts'
 
 export type CartItem = {
-  productId: string
+  productId: number
   name: string
   quantity: number
   note?: string
@@ -17,9 +17,9 @@ type State = {
 type Action =
   | { type: 'SET_TABLE'; tableId: number }
   | { type: 'ADD_ITEM'; product: Product; quantity: number }
-  | { type: 'REMOVE_ITEM'; productId: string }
-  | { type: 'SET_QTY'; productId: string; quantity: number }
-  | { type: 'SET_ITEM_NOTE'; productId: string; note: string }
+  | { type: 'REMOVE_ITEM'; productId: number }
+  | { type: 'SET_QTY'; productId: number; quantity: number }
+  | { type: 'SET_ITEM_NOTE'; productId: number; note: string }
   | { type: 'SET_ORDER_NOTE'; note: string }
   | { type: 'CLEAR' }
 
@@ -105,9 +105,9 @@ const CartCtx = createContext<{
   actions: {
     setTable: (tableId: number) => void
     addItem: (product: Product, quantity?: number) => void
-    removeItem: (productId: string) => void
-    setQty: (productId: string, quantity: number) => void
-    setItemNote: (productId: string, note: string) => void
+    removeItem: (productId: number) => void
+    setQty: (productId: number, quantity: number) => void
+    setItemNote: (productId: number, note: string) => void
     setOrderNote: (note: string) => void
     clear: () => void
   }
@@ -124,10 +124,10 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       actions: {
         setTable: (tableId: number) => dispatch({ type: 'SET_TABLE', tableId }),
         addItem: (product: Product, quantity = 1) => dispatch({ type: 'ADD_ITEM', product, quantity }),
-        removeItem: (productId: string) => dispatch({ type: 'REMOVE_ITEM', productId }),
-        setQty: (productId: string, quantity: number) =>
+        removeItem: (productId: number) => dispatch({ type: 'REMOVE_ITEM', productId }),
+        setQty: (productId: number, quantity: number) =>
           dispatch({ type: 'SET_QTY', productId, quantity }),
-        setItemNote: (productId: string, note: string) =>
+        setItemNote: (productId: number, note: string) =>
           dispatch({ type: 'SET_ITEM_NOTE', productId, note }),
         setOrderNote: (note: string) => dispatch({ type: 'SET_ORDER_NOTE', note }),
         clear: () => dispatch({ type: 'CLEAR' }),

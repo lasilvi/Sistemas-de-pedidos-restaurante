@@ -43,7 +43,7 @@ export function MenuPage() {
 
   const [search, setSearch] = useState('')
   const [selectedTab, setSelectedTab] = useState('all')
-  const [lastAddedId, setLastAddedId] = useState<string | null>(null)
+  const [lastAddedId, setLastAddedId] = useState<number | null>(null)
   const [showCartHint, setShowCartHint] = useState(false)
   const [cartPulseTick, setCartPulseTick] = useState(0)
 
@@ -97,7 +97,7 @@ export function MenuPage() {
     )
   }
 
-  function triggerCartFeedback(productId: string, hint = true) {
+  function triggerCartFeedback(productId: number, hint = true) {
     setLastAddedId(productId)
     if (hint) setShowCartHint(true)
     setCartPulseTick((prev) => prev + 1)
@@ -131,7 +131,7 @@ export function MenuPage() {
     triggerCartFeedback(product.id, true)
   }
 
-  function decrease(productId: string) {
+  function decrease(productId: number) {
     const current = cartQtyById.get(productId) ?? 0
     if (current <= 0) return
     updateCartItem(productId, current - 1)

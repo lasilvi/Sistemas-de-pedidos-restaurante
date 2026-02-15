@@ -2,7 +2,7 @@ import React, { createContext, useContext, useEffect, useMemo, useReducer, useSt
 import type { Order, Product } from '@/api/contracts'
 
 type CartItem = {
-  productId: string
+  productId: number
   name: string
   quantity: number
   note?: string
@@ -17,9 +17,9 @@ type CartState = {
 type CartAction =
   | { type: 'SET_TABLE'; tableId: number }
   | { type: 'ADD_ITEM'; product: Product; quantity: number }
-  | { type: 'REMOVE_ITEM'; productId: string }
-  | { type: 'SET_QTY'; productId: string; quantity: number }
-  | { type: 'SET_ITEM_NOTE'; productId: string; note: string }
+  | { type: 'REMOVE_ITEM'; productId: number }
+  | { type: 'SET_QTY'; productId: number; quantity: number }
+  | { type: 'SET_ITEM_NOTE'; productId: number; note: string }
   | { type: 'SET_ORDER_NOTE'; note: string }
   | { type: 'CLEAR_CART' }
 
@@ -28,8 +28,8 @@ type AppContextValue = {
   setTableNumber: (tableId: number) => void
   cart: CartItem[]
   addToCart: (product: Product, quantity?: number) => void
-  updateCartItem: (productId: string, quantity: number, note?: string) => void
-  removeFromCart: (productId: string) => void
+  updateCartItem: (productId: number, quantity: number, note?: string) => void
+  removeFromCart: (productId: number) => void
   clearCart: () => void
   orderNote: string
   setOrderNote: (note: string) => void
@@ -138,11 +138,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setTableNumber: (tableId: number) => dispatch({ type: 'SET_TABLE', tableId }),
       cart: cartState.items,
       addToCart: (product: Product, quantity = 1) => dispatch({ type: 'ADD_ITEM', product, quantity }),
-      updateCartItem: (productId: string, quantity: number, note?: string) => {
+      updateCartItem: (productId: number, quantity: number, note?: string) => {
         dispatch({ type: 'SET_QTY', productId, quantity })
         if (typeof note === 'string') dispatch({ type: 'SET_ITEM_NOTE', productId, note })
       },
-      removeFromCart: (productId: string) => dispatch({ type: 'REMOVE_ITEM', productId }),
+      removeFromCart: (productId: number) => dispatch({ type: 'REMOVE_ITEM', productId }),
       clearCart: () => dispatch({ type: 'CLEAR_CART' }),
       orderNote: cartState.orderNote,
       setOrderNote: (note: string) => dispatch({ type: 'SET_ORDER_NOTE', note }),

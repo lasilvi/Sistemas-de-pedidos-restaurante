@@ -31,7 +31,7 @@ export function CartPage() {
   const menuQ = useQuery({ queryKey: ['menu'], queryFn: getMenu })
 
   const productMap = useMemo(() => {
-    const map = new Map<string, { price: number; imageUrl?: string }>()
+    const map = new Map<number, { price: number; imageUrl?: string }>()
     for (const product of menuQ.data ?? []) {
       map.set(product.id, { price: product.price ?? 0, imageUrl: product.imageUrl })
     }
