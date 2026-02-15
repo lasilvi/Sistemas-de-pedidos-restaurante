@@ -1,3 +1,5 @@
+﻿import { Badge as UiBadge } from '@/components/ui/badge'
+
 export function Badge({ children }: { children: React.ReactNode }) {
-  return <span className="badge">{children}</span>
+  return <UiBadge>{children}</UiBadge>
 }

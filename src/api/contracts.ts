@@ -1,9 +1,11 @@
 export type Product = {
-  id: string
+  id: number
   name: string
   description?: string
   price?: number
   isActive?: boolean
+  category?: string
+  imageUrl?: string
 }
 
 export type OrderStatus =
@@ -12,7 +14,7 @@ export type OrderStatus =
   | 'READY'
 
 export type OrderItem = {
-  productId: string
+  productId: number
   quantity: number
   note?: string
   // info extra para UI (viene del backend)
@@ -33,7 +35,7 @@ export type Order = {
 
 export type CreateOrderRequest = {
   tableId: number
-  items: Array<{ productId: string; quantity: number; note?: string }>
+  items: Array<{ productId: number; quantity: number; note?: string }>
   note?: string
 }
 

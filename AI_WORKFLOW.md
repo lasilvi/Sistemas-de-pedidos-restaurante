@@ -48,17 +48,17 @@ Nota: si se usa CLI directo, los comandos son los mismos sin el prefijo /openspe
 6. /openspec apply change docs-driven-spec (implementar cambios)
 7. /openspec verify change docs-driven-spec (verificar)
 8. /openspec archive change docs-driven-spec (cerrar el cambio)
-### 6) Demo p�blica temporal (Quick Tunnel)
+### 6) Demo p�blica temporal (Quick Tunnel)
 Cuando se necesite compartir una demo sin instalar nada:
 1. Levantar el stack con Docker Compose en develop.
-2. Crear t�neles con cloudflared para backend (8080) y frontend (5173).
+2. Crear t�neles con cloudflared para backend (8080) y frontend (5173).
 3. Configurar .env con VITE_USE_MOCK=false, VITE_API_BASE_URL=<URL_BACKEND_PUBLICA>.
 4. Para demo temporal, usar VITE_ALLOWED_HOSTS=.trycloudflare.com y CORS_ALLOWED_ORIGIN_PATTERNS=https://*.trycloudflare.com.
 5. Rebuild del frontend con docker compose up -d --build frontend.
 
-**Regla de producci�n (main):**
+**Regla de producci�n (main):**
 No usar mockdata (VITE_USE_MOCK=false).
-No dejar habilitados hosts/t�neles temporales salvo que se documente la excepci�n.
+No dejar habilitados hosts/t�neles temporales salvo que se documente la excepci�n.
 
 ### 1) Principios AI‑First (no negociables)
 - **La IA es el Junior Developer**: genera boilerplate, scaffolding, pruebas base y propone integraciones.
@@ -355,21 +355,150 @@ Para cada feature/cambio relevante:
   - links a PR/commit
   - lecciones aprendidas (qué prompt funcionó / qué no)
 
-### 5) Checklists rápidos
+### 5) Protocolo de Quality Gate (Puerta de Calidad)
+
+**Objetivo:** La IA actúa como "Quality Gate" antes de cada commit, validando que el código cumple con estándares de calidad y no introduce deuda técnica imprudente.
+
+#### Cuándo Activar el Quality Gate
+
+**OBLIGATORIO antes de:**
+- Commit de código nuevo
+- Merge de PR
+- Deploy a cualquier ambiente
+
+**Proceso:**
+
+1. **Solicitar Revisión a la IA**
+   ```
+   ROL: Actúa como Quality Gate. Revisa el siguiente código/cambio antes de commit.
+   
+   CÓDIGO/CAMBIO:
+   [pegar código o descripción del cambio]
+   
+   CONTEXTO:
+   - Feature: [nombre]
+   - Archivos modificados: [lista]
+   - Tipo de cambio: [nuevo/refactor/fix]
+   
+   VALIDA:
+   1. Cumplimiento de estándares de código
+   2. No introduce deuda técnica imprudente
+   3. Tests adecuados
+   4. Documentación actualizada
+   5. Seguridad básica
+   6. Rendimiento aceptable
+   ```
+
+2. **La IA Debe Responder Con:**
+   - ✅ **APROBADO** (puede hacer commit) o ❌ **RECHAZADO** (requiere cambios)
+   - Lista de issues encontrados por severidad (Blocker/Major/Minor)
+   - Recomendaciones de mejora
+   - Deuda técnica identificada (si aplica)
+
+3. **Criterios de Aprobación:**
+   - ✅ Sin issues Blocker
+   - ✅ Tests pasando
+   - ✅ Lint/format OK
+   - ✅ Sin deuda técnica Imprudente y Deliberada
+   - ✅ Documentación actualizada
+
+#### Checklist de Quality Gate
+
 **Antes de pedir código**
 - [ ] AC claros y verificables
 - [ ] Rutas/archivos objetivo definidos
 - [ ] Versiones y restricciones definidas
 - [ ] Contratos (API/eventos) definidos
 
-**Antes de merge**
+**Antes de commit (Quality Gate)**
 - [ ] Build OK
-- [ ] Tests OK
+- [ ] Tests OK (cobertura mínima 70%)
 - [ ] Lint/format OK
+- [ ] Sin code smells críticos
+- [ ] Sin vulnerabilidades de seguridad
+- [ ] Rendimiento aceptable (sin N+1, sin memory leaks)
+- [ ] Documentación actualizada (README, ADR, comentarios)
+- [ ] No introduce deuda técnica Imprudente
+- [ ] Revisión de IA completada y aprobada
+
+**Antes de merge**
+- [ ] Quality Gate pasado
+- [ ] PR description completa
+- [ ] Review de al menos 1 par
+- [ ] CI/CD pasando
 - [ ] README actualizado (si cambió setup/uso)
 - [ ] ADR/spec actualizado (si cambió una decisión/contrato)
+- [ ] Deuda técnica documentada (si se introduce)
 
-### 6) Manejo de ambigüedad (cuando la IA debe preguntar)
+### 6) Gestión de Deuda Técnica
+
+**Documento de Referencia:** `DEUDA_TECNICA.md`
+
+#### Identificación de Deuda
+
+La IA debe identificar y clasificar deuda técnica según el Cuadrante de Martin Fowler:
+
+1. **Prudente y Deliberada:** Decisión consciente por razones de negocio
+2. **Prudente e Inadvertida:** Aprendizaje post-implementación
+3. **Imprudente y Deliberada:** Decisión consciente de hacer algo mal (EVITAR)
+4. **Imprudente e Inadvertida:** Falta de conocimiento
+
+#### Proceso de Registro
+
+Cuando la IA identifica deuda técnica:
+
+1. **Clasificar** según cuadrante de Fowler
+2. **Documentar** en `DEUDA_TECNICA.md`:
+   - ID único (DT-XXX)
+   - Descripción del problema
+   - Cuadrante y justificación
+   - Impacto (negocio y técnico)
+   - Solución propuesta
+   - Costo estimado de pago
+   - Trigger para pago
+3. **Notificar** al equipo en PR description
+4. **Priorizar** según matriz de impacto vs esfuerzo
+
+#### Política de Deuda
+
+**PROHIBIDO:**
+- Agregar deuda Imprudente y Deliberada sin aprobación del Product Owner
+- Dejar deuda sin documentar
+- Ignorar deuda de severidad Alta por más de 1 sprint
+
+**OBLIGATORIO:**
+- Documentar toda deuda en `DEUDA_TECNICA.md`
+- Pagar deuda crítica antes de agregar nuevas features
+- Dedicar 20% del tiempo a pagar deuda técnica
+- Revisar deuda en cada retrospectiva
+
+#### Ejemplo de Prompt para Identificar Deuda
+
+```
+ROL: Actúa como auditor de deuda técnica.
+
+CÓDIGO:
+[pegar código]
+
+ANALIZA:
+1. ¿Hay deuda técnica en este código?
+2. Si sí, clasifícala según el Cuadrante de Fowler
+3. Justifica la clasificación
+4. Estima el costo de pago
+5. Propón solución
+6. Define trigger para pago
+
+FORMATO DE SALIDA:
+- Deuda identificada: [sí/no]
+- Cuadrante: [Prudente/Imprudente] y [Deliberada/Inadvertida]
+- Justificación: [explicación]
+- Impacto: [Alto/Medio/Bajo]
+- Costo de pago: [horas estimadas]
+- Solución propuesta: [descripción]
+- Trigger: [cuándo pagar]
+```
+
+### 7) Manejo de ambigüedad (cuando la IA debe preguntar)
 La IA debe detenerse y preguntar cuando falte:
 - Volumen/escala (impacta arquitectura)
 - Contrato de eventos/API

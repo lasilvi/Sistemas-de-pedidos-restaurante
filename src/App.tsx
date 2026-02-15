@@ -12,10 +12,10 @@ import { RequireKitchenAuth } from '@/components/RequireKitchenAuth'
 
 export default function App() {
   return (
-    <CartProvider>
+    <AppProvider>
       <Routes>
         <Route element={<AppLayout />}>
-          <Route path="/" element={<Navigate to="/client/table" replace />} />
+          <Route path="/" element={<WelcomePage />} />
 
           <Route path="/client/table" element={<TableSelectPage />} />
           <Route path="/client/menu" element={<MenuPage />} />
@@ -37,6 +37,6 @@ export default function App() {
           <Route path="*" element={<Navigate to="/client/table" replace />} />
         </Route>
       </Routes>
-    </CartProvider>
+    </AppProvider>
   )
 }

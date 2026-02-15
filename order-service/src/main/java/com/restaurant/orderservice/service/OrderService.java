@@ -5,11 +5,9 @@ import com.restaurant.orderservice.application.port.out.OrderPlacedEventPublishe
 import com.restaurant.orderservice.domain.event.OrderPlacedDomainEvent;
 import com.restaurant.orderservice.entity.Order;
 import com.restaurant.orderservice.entity.OrderItem;
-import com.restaurant.orderservice.entity.Product;
 import com.restaurant.orderservice.enums.OrderStatus;
 import com.restaurant.orderservice.exception.InvalidOrderException;
 import com.restaurant.orderservice.exception.OrderNotFoundException;
-import com.restaurant.orderservice.exception.ProductNotFoundException;
 import com.restaurant.orderservice.repository.OrderRepository;
 import com.restaurant.orderservice.repository.ProductRepository;
 import com.restaurant.orderservice.service.command.OrderCommandExecutor;
@@ -27,8 +25,12 @@ import java.util.stream.Collectors;
 /**
  * Service for managing order operations.
  * 
- * Provides business logic for creating, retrieving, filtering, and updating orders.
- * Handles validation of order data, product availability, and event publishing.
+ * Refactored to follow Single Responsibility Principle (SRP).
+ * This service now focuses solely on orchestration, delegating to specialized components:
+ * - OrderValidator: Business rule validation
+ * - OrderMapper: Entity-DTO mapping (with N+1 optimization)
+ * - OrderEventBuilder: Event construction
+ * - OrderPlacedEventPublisherPort: Event publishing abstraction
  * 
  * Validates Requirements: 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7, 2.8, 3.1, 4.1, 4.2, 5.1, 5.2, 6.2
  */
@@ -91,25 +93,8 @@ public class OrderService {
     public OrderResponse createOrder(CreateOrderRequest request) {
         log.info("Creating order for table {}", request.getTableId());
         
-        // Validate tableId (additional validation beyond @Valid annotation)
-        if (request.getTableId() == null || request.getTableId() <= 0) {
-            throw new InvalidOrderException("Table ID must be a positive integer");
-        }
-        
-        // Validate items list is not empty
-        if (request.getItems() == null || request.getItems().isEmpty()) {
-            throw new InvalidOrderException("Order must contain at least one item");
-        }
-        
-        // Validate that all products exist and are active
-        for (OrderItemRequest itemRequest : request.getItems()) {
-            Product product = productRepository.findById(itemRequest.getProductId())
-                    .orElseThrow(() -> new ProductNotFoundException(itemRequest.getProductId()));
-            
-            if (!product.getIsActive()) {
-                throw new ProductNotFoundException(itemRequest.getProductId());
-            }
-        }
+        // Delegate validation to OrderValidator
+        orderValidator.validateCreateOrderRequest(request);
         
         // Create Order entity
         Order order = new Order();
@@ -140,8 +125,8 @@ public class OrderService {
         OrderPlacedDomainEvent event = buildOrderPlacedDomainEvent(savedOrder);
         orderCommandExecutor.execute(new PublishOrderPlacedEventCommand(orderPlacedEventPublisherPort, event));
         
-        // Map to OrderResponse and return
-        return mapToOrderResponse(savedOrder);
+        // Delegate mapping to OrderMapper
+        return orderMapper.mapToOrderResponse(savedOrder);
     }
     
     /**
@@ -162,7 +147,8 @@ public class OrderService {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new OrderNotFoundException(orderId));
         
-        return mapToOrderResponse(order);
+        // Delegate mapping to OrderMapper
+        return orderMapper.mapToOrderResponse(order);
     }
     
     /**
@@ -191,9 +177,8 @@ public class OrderService {
             orders = orderRepository.findByStatusIn(status);
         }
         
-        return orders.stream()
-                .map(this::mapToOrderResponse)
-                .collect(Collectors.toList());
+        // Delegate mapping to OrderMapper (optimized for batch)
+        return orderMapper.mapToOrderResponseList(orders);
     }
     
     /**

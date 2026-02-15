@@ -1,4 +1,10 @@
-import type { CreateOrderRequest, CreateOrderResponse, Order, OrderStatus, Product } from '@/api/contracts'
+﻿import type {
+  CreateOrderRequest,
+  CreateOrderResponse,
+  Order,
+  OrderStatus,
+  Product,
+} from '@/api/contracts'
 
 const nowIso = () => new Date().toISOString()
 
@@ -14,22 +20,58 @@ function nextId() {
 
 const products: Product[] = [
   {
-    id: '1',
-    name: 'Pizza Margherita',
-    description: 'Pizza clasica con tomate, mozzarella y albahaca',
+    id: 1,
+    name: 'Empanadas criollas',
+    description: 'Empanadas de carne con salsa casera.',
+    price: 450,
     isActive: true,
+    category: 'entradas',
+    imageUrl: 'https://images.unsplash.com/photo-1603360946369-dc9bb6258143?w=400&h=300&fit=crop',
   },
   {
-    id: '2',
-    name: 'Hamburguesa Clasica',
-    description: 'Hamburguesa de carne con lechuga, tomate y queso',
+    id: 2,
+    name: 'Provoleta grillada',
+    description: 'Queso provolone con oregano y oliva.',
+    price: 520,
     isActive: true,
+    category: 'entradas',
+    imageUrl: 'https://picsum.photos/seed/provoleta-grillada/400/300',
   },
   {
-    id: '3',
-    name: 'Ensalada Cesar',
-    description: 'Ensalada fresca con pollo, parmesano y aderezo Cesar',
+    id: 3,
+    name: 'Bife de chorizo',
+    description: 'Corte premium con papas rusticas.',
+    price: 1850,
     isActive: true,
+    category: 'principales',
+    imageUrl: 'https://images.unsplash.com/photo-1558030006-450675393462?w=400&h=300&fit=crop',
+  },
+  {
+    id: 4,
+    name: 'Milanesa napolitana',
+    description: 'Milanesa con salsa pomodoro y queso.',
+    price: 1420,
+    isActive: true,
+    category: 'principales',
+    imageUrl: 'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=400&h=300&fit=crop',
+  },
+  {
+    id: 5,
+    name: 'Volcan de chocolate',
+    description: 'Bizcocho tibio con centro fundido.',
+    price: 480,
+    isActive: true,
+    category: 'postres',
+    imageUrl: 'https://images.unsplash.com/photo-1624353365286-3f8d62daad51?w=400&h=300&fit=crop',
+  },
+  {
+    id: 6,
+    name: 'Limonada de la casa',
+    description: 'Limon, menta y almibar ligero.',
+    price: 280,
+    isActive: true,
+    category: 'bebidas',
+    imageUrl: 'https://picsum.photos/seed/limonada-casa/400/300',
   },
 ]
 
@@ -46,7 +88,8 @@ function seedOrders() {
       id: nextId(),
       tableId: 3,
       status: 'PENDING',
-      items: [{ productId: '1', quantity: 2 }],
+      items: [{ productId: 1, quantity: 2, note: 'Sin cebolla' }],
+      note: 'Enviar cubiertos extra',
       createdAt,
       updatedAt: createdAt,
     },
@@ -54,7 +97,7 @@ function seedOrders() {
       id: nextId(),
       tableId: 5,
       status: 'IN_PREPARATION',
-      items: [{ productId: '2', quantity: 1 }],
+      items: [{ productId: 3, quantity: 1 }],
       createdAt,
       updatedAt: createdAt,
     },

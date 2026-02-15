@@ -1,5 +1,9 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+﻿import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
+import { ChefHat, Clock, LogOut } from 'lucide-react'
+import { motion } from 'motion/react'
+import { getMenu } from '@/api/menu'
 import { listOrders, patchOrderStatus } from '@/api/orders'
 import { HttpError } from '@/api/http'
 import type { Order, OrderStatus } from '@/api/contracts'
@@ -9,25 +13,56 @@ import { SectionTitle } from '@/components/SectionTitle'
 import { Badge } from '@/components/Badge'
 import { ErrorState } from '@/components/ErrorState'
 import { Loading } from '@/components/Loading'
+import { ErrorState } from '@/components/ErrorState'
+import { Card } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Dialog, DialogSection } from '@/components/ui/dialog'
+import { useToast } from '@/components/ui/toast'
+
+const COLUMNS: Array<{ status: OrderStatus; title: string; tone: 'warning' | 'success' | 'outline' }> = [
+  { status: 'PENDING', title: 'Pendiente', tone: 'warning' },
+  { status: 'IN_PREPARATION', title: 'En preparacion', tone: 'outline' },
+  { status: 'READY', title: 'Listo', tone: 'success' },
+]
+
+const POLL_MS = 3000
+
+function formatDateTime(value?: string) {
+  if (!value) return 'N/A'
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return value
+  return date.toLocaleString('es-CO')
+}
 
 export function KitchenBoardPage() {
   const navigate = useNavigate()
+  const { toast } = useToast()
 
-  const [statusFilter, setStatusFilter] = useState<OrderStatus[]>(ACTIVE_STATUSES)
+  const {
+    kitchenDetailOrderId,
+    openKitchenOrderDetail,
+    closeKitchenOrderDetail,
+  } = useApp()
+
+  const token = getKitchenToken()
+  const menuQ = useQuery({ queryKey: ['menu'], queryFn: getMenu, staleTime: 60_000 })
+
   const [orders, setOrders] = useState<Order[]>([])
   const [initialLoading, setInitialLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
-  const [error, setError] = useState<string>('')
-  const [patching, setPatching] = useState(false)
+  const [error, setError] = useState('')
+  const [patchingOrderId, setPatchingOrderId] = useState('')
 
-  const inFlightRef = useRef(false)
   const timeoutRef = useRef<number | null>(null)
   const mountedRef = useRef(false)
+  const inFlightRef = useRef(false)
 
   const loadOrders = useCallback(
     async ({ block }: { block: boolean }) => {
       if (inFlightRef.current) return
       inFlightRef.current = true
+
       if (block) setInitialLoading(true)
       else setRefreshing(true)
 
@@ -48,30 +83,37 @@ export function KitchenBoardPage() {
           return
         }
         if (!mountedRef.current) return
-        const msg = err instanceof Error ? err.message : 'No pudimos cargar pedidos'
-        setError(msg)
+        setError(err instanceof Error ? err.message : 'No pudimos cargar pedidos')
       } finally {
-        if (!mountedRef.current) return
         inFlightRef.current = false
-        if (block) setInitialLoading(false)
-        else setRefreshing(false)
-        timeoutRef.current = window.setTimeout(() => {
-          if (mountedRef.current) loadOrders({ block: false })
-        }, 3000)
+        if (mountedRef.current) {
+          if (block) setInitialLoading(false)
+          else setRefreshing(false)
+
+          timeoutRef.current = window.setTimeout(() => {
+            if (mountedRef.current) loadOrders({ block: false })
+          }, POLL_MS)
+        }
       }
     },
     [navigate, statusFilter],
   )
 
   useEffect(() => {
+    if (!token) {
+      navigate('/kitchen', { replace: true })
+      return
+    }
+
     mountedRef.current = true
     loadOrders({ block: true })
+
     return () => {
       mountedRef.current = false
       inFlightRef.current = false
       if (timeoutRef.current) window.clearTimeout(timeoutRef.current)
     }
-  }, [loadOrders])
+  }, [loadOrders, navigate, token])
 
   const grouped = useMemo(() => {
     const by: Record<OrderStatus, Order[]> = {
@@ -79,24 +121,46 @@ export function KitchenBoardPage() {
       IN_PREPARATION: [],
       READY: [],
     }
-    for (const o of orders) by[o.status]?.push(o)
+    for (const order of orders) by[order.status]?.push(order)
     return by
   }, [orders])
 
-  if (initialLoading) return <Loading label="Cargando pedidos..." />
+  const productNames = useMemo(() => buildProductNameMap(menuQ.data), [menuQ.data])
 
-  if (error && orders.length === 0) {
-    return (
-      <ErrorState
-        title="No pudimos cargar pedidos"
-        detail={error}
-        onRetry={() => loadOrders({ block: true })}
-      />
-    )
+  const selectedOrder = useMemo(
+    () => orders.find((order) => order.id === kitchenDetailOrderId) ?? null,
+    [kitchenDetailOrderId, orders],
+  )
+
+  useEffect(() => {
+    if (!kitchenDetailOrderId) return
+    if (!selectedOrder) closeKitchenOrderDetail()
+  }, [closeKitchenOrderDetail, kitchenDetailOrderId, selectedOrder])
+
+  async function move(order: Order, status: OrderStatus) {
+    try {
+      setPatchingOrderId(order.id)
+      await patchOrderStatus(order.id, status, token)
+      toast({
+        title: 'Pedido actualizado',
+        description: `Estado: ${STATUS_LABEL[status]}`,
+        tone: 'success',
+      })
+      await loadOrders({ block: false })
+    } catch (err) {
+      toast({
+        title: 'No se pudo actualizar',
+        description: err instanceof Error ? err.message : 'Error inesperado',
+        tone: 'danger',
+      })
+    } finally {
+      setPatchingOrderId('')
+    }
   }
 
-  function orderIdOf(o: Order) {
-    return o.id
+  function logout() {
+    clearKitchenToken()
+    navigate('/kitchen', { replace: true })
   }
 
   return (
@@ -122,54 +186,9 @@ export function KitchenBoardPage() {
         }
       />
 
-      {error && orders.length > 0 ? (
-        <div className="card flex flex-wrap items-center justify-between gap-3 p-4 text-sm text-slate-200">
-          <div>
-            <div className="font-semibold">No pudimos actualizar pedidos</div>
-            <div className="text-xs text-slate-400">{error}</div>
-          </div>
-          <button className="btn btn-ghost cursor-pointer" onClick={() => loadOrders({ block: false })}>
-            Reintentar
-          </button>
-        </div>
-      ) : null}
-
-      <div className="card p-4">
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="text-xs text-slate-400">Filtrar:</div>
-          {ACTIVE_STATUSES.map((s) => (
-            <button
-              key={s}
-              className={`btn cursor-pointer ${statusFilter.includes(s) ? 'btn-primary' : 'btn-ghost'}`}
-              onClick={() =>
-                setStatusFilter((prev) =>
-                  prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s],
-                )
-              }
-            >
-              {STATUS_LABEL[s]}
-            </button>
-          ))}
-          <button
-            className="btn btn-ghost cursor-pointer"
-            onClick={() => setStatusFilter(ACTIVE_STATUSES)}
-          >
-            Reset
-          </button>
-        </div>
-      </div>
-
-      {orders.length === 0 ? (
-        <div className="card p-6 text-sm text-slate-400">No hay pedidos con el filtro actual.</div>
-      ) : (
-        <div className="space-y-4">
-          {ACTIVE_STATUSES.map((status) =>
-            grouped[status].length === 0 ? null : (
-              <div key={status} className="card p-6">
-                <div className="mb-4 flex items-center justify-between">
-                  <div className="text-base font-semibold">{STATUS_LABEL[status]}</div>
-                  <Badge>{grouped[status].length}</Badge>
-                </div>
+  if (error && orders.length === 0) {
+    return <ErrorState title="No pudimos cargar pedidos" detail={error} onRetry={() => loadOrders({ block: true })} />
+  }
 
                 <div className="space-y-3">
                   {grouped[status].map((o) => (
@@ -198,81 +217,173 @@ export function KitchenBoardPage() {
                   ))}
                 </div>
               </div>
-            ),
-          )}
+            </div>
+            <div className="flex items-center gap-2">
+              <ThemeToggle />
+              <Link to="/client/table">
+                <Button variant="outline" size="sm">Cliente</Button>
+              </Link>
+              <Button variant="ghost" size="icon" onClick={logout}>
+                <LogOut className="h-5 w-5" />
+              </Button>
+            </div>
+          </div>
         </div>
-      )}
+      </header>
 
-      <div className="text-xs text-slate-500">
-        Si tu backend necesita un query diferente para status (CSV vs repeated params), ajusta `src/api/orders.ts`.
-      </div>
-    </div>
-  )
-}
+      <main className="page-wrap py-6">
+        {error ? (
+          <Card className="mb-4 border-warning/30 bg-warning/10 p-3 text-sm text-muted-foreground">{error}</Card>
+        ) : null}
 
-function OrderRow({
-  order,
-  patchPending,
-  onChangeStatus,
-}: {
-  order: Order
-  patchPending: boolean
-  onChangeStatus: (s: OrderStatus) => void
-}) {
-  const id = order.id
-  const next = NEXT_STATUSES[order.status] ?? []
-  const totalItems = order.items?.reduce((acc, i) => acc + (i.quantity ?? 0), 0) ?? 0
+        {activeOrders.length === 0 ? (
+          <Card className="p-8 text-center text-sm text-muted-foreground">No hay pedidos activos.</Card>
+        ) : (
+          <div className="grid gap-6 xl:grid-cols-3">
+            {COLUMNS.map((column) => {
+              const columnOrders = grouped[column.status]
+              return (
+                <div key={column.status} className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-lg font-semibold">{column.title}</h2>
+                    <Badge variant={column.tone}>{columnOrders.length}</Badge>
+                  </div>
 
-  return (
-    <div className="rounded-2xl bg-slate-950/40 p-4 ring-1 ring-slate-800">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="flex-1">
-          <div className="text-sm font-semibold">
-            Mesa {order.tableId} · <span className="text-slate-400">#{id.slice(0, 8)}…</span>
-          </div>
-          <div className="mt-1 text-xs text-slate-500">
-            Total de ítems: {totalItems}
-          </div>
-          
-          {/* Lista de items del pedido */}
-          {order.items && order.items.length > 0 && (
-            <div className="mt-3 space-y-2">
-              {order.items.map((item, idx) => (
-                <div 
-                  key={item.productId + '-' + idx} 
-                  className="rounded-lg bg-slate-900/50 p-3 text-xs"
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex-1">
-                      <div className="font-medium text-slate-200">
-                        {item.quantity}x {item.productName || item.name || `Producto #${item.productId}`}
-                      </div>
-                      {item.note && (
-                        <div className="mt-1 text-slate-400 italic">
-                          Nota: {item.note}
-                        </div>
-                      )}
-                    </div>
+                  <div className="space-y-3">
+                    {columnOrders.map((order, index) => {
+                      const totalItems = order.items.reduce((sum, item) => sum + item.quantity, 0)
+                      const next = NEXT_STATUS[order.status]
+                      const previous = PREVIOUS_STATUS[order.status]
+                      const ageMinutes = order.createdAt
+                        ? Math.max(0, Math.floor((Date.now() - new Date(order.createdAt).getTime()) / 60000))
+                        : null
+
+                      return (
+                        <motion.div
+                          key={order.id}
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: index * 0.03, duration: 0.2 }}
+                        >
+                          <Card
+                            className="cursor-pointer p-4 transition hover:border-accent/40 hover:shadow-md"
+                            onClick={() => openKitchenOrderDetail(order)}
+                          >
+                            <div className="mb-3 flex items-start justify-between">
+                              <div>
+                                <h3 className="text-lg font-semibold">Mesa {order.tableId}</h3>
+                                <p className="text-xs text-muted-foreground">#{order.id.slice(0, 8)}</p>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Badge variant="outline">{totalItems} items</Badge>
+                                {ageMinutes !== null ? (
+                                  <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                                    <Clock className="h-3 w-3" />
+                                    {ageMinutes}m
+                                  </span>
+                                ) : null}
+                              </div>
+                            </div>
+
+                            <div className="mb-3 space-y-1 text-sm">
+                              {order.items.slice(0, 3).map((item) => (
+                                <div key={`${order.id}-${item.productId}-${item.note ?? ''}`} className="flex items-center justify-between">
+                                  <span>{resolveOrderItemName(item, productNames)}</span>
+                                  <span>x{item.quantity}</span>
+                                </div>
+                              ))}
+                              {order.items.length > 3 ? (
+                                <p className="text-xs text-muted-foreground">+ {order.items.length - 3} mas</p>
+                              ) : null}
+                              {order.note ? <p className="text-xs text-muted-foreground">Nota: {order.note}</p> : null}
+                            </div>
+
+                            <div className="flex flex-wrap gap-2">
+                              {previous ? (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  disabled={patchingOrderId === order.id}
+                                  onClick={(event) => {
+                                    event.stopPropagation()
+                                    move(order, previous)
+                                  }}
+                                >
+                                  Volver
+                                </Button>
+                              ) : null}
+                              {next ? (
+                                <Button
+                                  size="sm"
+                                  disabled={patchingOrderId === order.id}
+                                  onClick={(event) => {
+                                    event.stopPropagation()
+                                    move(order, next)
+                                  }}
+                                >
+                                  {next === 'IN_PREPARATION' ? 'Iniciar' : 'Marcar listo'}
+                                </Button>
+                              ) : null}
+                            </div>
+                          </Card>
+                        </motion.div>
+                      )
+                    })}
                   </div>
                 </div>
-              ))}
-            </div>
-          )}
-        </div>
+              )
+            })}
+          </div>
+        )}
+      </main>
 
-        <div className="flex flex-wrap items-center gap-2">
-          {next.map((s) => (
-            <button
-              key={s}
-              className="btn btn-primary cursor-pointer"
-              disabled={patchPending}
-              onClick={() => onChangeStatus(s)}
-            >
-              Pasar a {STATUS_LABEL[s]}
-            </button>
-          ))}
-        </div>
-      </div>
+      <Dialog
+        open={Boolean(selectedOrder)}
+        onOpenChange={(open) => {
+          if (!open) closeKitchenOrderDetail()
+        }}
+        title={selectedOrder ? `Mesa ${selectedOrder.tableId} · ${STATUS_LABEL[selectedOrder.status]}` : 'Pedido'}
+        contentClassName="max-w-3xl"
+      >
+        {selectedOrder ? (
+          <div className="space-y-4 text-sm">
+            <DialogSection>
+              <div className="grid gap-2 rounded-xl border border-border p-3">
+                <p><span className="font-medium">ID completo:</span> {selectedOrder.id}</p>
+                <p><span className="font-medium">Mesa:</span> {selectedOrder.tableId}</p>
+                <p><span className="font-medium">Estado:</span> {STATUS_LABEL[selectedOrder.status]}</p>
+                <p><span className="font-medium">Creado:</span> {formatDateTime(selectedOrder.createdAt)}</p>
+                <p><span className="font-medium">Actualizado:</span> {formatDateTime(selectedOrder.updatedAt)}</p>
+              </div>
+            </DialogSection>
+
+            <DialogSection>
+              <h4 className="font-medium">Items del pedido</h4>
+              <div className="space-y-2">
+                {selectedOrder.items.map((item) => (
+                  <div
+                    key={`${selectedOrder.id}-${item.productId}-${item.note ?? ''}`}
+                    className="rounded-xl border border-border p-3"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span>{resolveOrderItemName(item, productNames)}</span>
+                      <span className="font-medium">x{item.quantity}</span>
+                    </div>
+                    {item.note ? <p className="mt-1 text-xs text-muted-foreground">Nota: {item.note}</p> : null}
+                  </div>
+                ))}
+              </div>
+            </DialogSection>
+
+            {selectedOrder.note ? (
+              <DialogSection>
+                <h4 className="font-medium">Nota general</h4>
+                <p className="rounded-xl border border-border p-3 text-muted-foreground">{selectedOrder.note}</p>
+              </DialogSection>
+            ) : null}
+          </div>
+        ) : null}
+      </Dialog>
     </div>
   )
 }

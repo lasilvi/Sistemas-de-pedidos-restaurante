@@ -1,8 +1,8 @@
-import React, { createContext, useContext, useEffect, useMemo, useReducer } from 'react'
+﻿import React, { createContext, useContext, useEffect, useMemo, useReducer } from 'react'
 import type { Product } from '@/api/contracts'
 
 export type CartItem = {
-  productId: string
+  productId: number
   name: string
   quantity: number
   note?: string
@@ -16,13 +16,14 @@ type State = {
 
 type Action =
   | { type: 'SET_TABLE'; tableId: number }
-  | { type: 'ADD_ITEM'; product: Product }
-  | { type: 'REMOVE_ITEM'; productId: string }
-  | { type: 'SET_QTY'; productId: string; quantity: number }
+  | { type: 'ADD_ITEM'; product: Product; quantity: number }
+  | { type: 'REMOVE_ITEM'; productId: number }
+  | { type: 'SET_QTY'; productId: number; quantity: number }
+  | { type: 'SET_ITEM_NOTE'; productId: number; note: string }
   | { type: 'SET_ORDER_NOTE'; note: string }
   | { type: 'CLEAR' }
 
-const LS_KEY = 'orders_mvp_cart_v1'
+const LS_KEY = 'orders_mvp_cart_v2'
 
 function load(): State {
   try {
@@ -52,12 +53,13 @@ function reducer(state: State, action: Action): State {
     case 'SET_TABLE':
       return { ...state, tableId: action.tableId }
     case 'ADD_ITEM': {
+      const qty = Math.max(1, action.quantity)
       const existing = state.items.find((i) => i.productId === action.product.id)
       if (existing) {
         return {
           ...state,
           items: state.items.map((i) =>
-            i.productId === action.product.id ? { ...i, quantity: i.quantity + 1 } : i,
+            i.productId === action.product.id ? { ...i, quantity: i.quantity + qty } : i,
           ),
         }
       }
@@ -65,17 +67,28 @@ function reducer(state: State, action: Action): State {
         ...state,
         items: [
           ...state.items,
-          { productId: action.product.id, name: action.product.name, quantity: 1 },
+          { productId: action.product.id, name: action.product.name, quantity: qty },
         ],
       }
     }
     case 'REMOVE_ITEM':
       return { ...state, items: state.items.filter((i) => i.productId !== action.productId) }
-    case 'SET_QTY':
+    case 'SET_QTY': {
+      if (action.quantity <= 0) {
+        return { ...state, items: state.items.filter((i) => i.productId !== action.productId) }
+      }
       return {
         ...state,
         items: state.items.map((i) =>
           i.productId === action.productId ? { ...i, quantity: action.quantity } : i,
+        ),
+      }
+    }
+    case 'SET_ITEM_NOTE':
+      return {
+        ...state,
+        items: state.items.map((i) =>
+          i.productId === action.productId ? { ...i, note: action.note } : i,
         ),
       }
     case 'SET_ORDER_NOTE':
@@ -91,9 +104,10 @@ const CartCtx = createContext<{
   state: State
   actions: {
     setTable: (tableId: number) => void
-    addItem: (product: Product) => void
-    removeItem: (productId: string) => void
-    setQty: (productId: string, quantity: number) => void
+    addItem: (product: Product, quantity?: number) => void
+    removeItem: (productId: number) => void
+    setQty: (productId: number, quantity: number) => void
+    setItemNote: (productId: number, note: string) => void
     setOrderNote: (note: string) => void
     clear: () => void
   }
@@ -109,10 +123,12 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       state,
       actions: {
         setTable: (tableId: number) => dispatch({ type: 'SET_TABLE', tableId }),
-        addItem: (product: Product) => dispatch({ type: 'ADD_ITEM', product }),
-        removeItem: (productId: string) => dispatch({ type: 'REMOVE_ITEM', productId }),
-        setQty: (productId: string, quantity: number) =>
+        addItem: (product: Product, quantity = 1) => dispatch({ type: 'ADD_ITEM', product, quantity }),
+        removeItem: (productId: number) => dispatch({ type: 'REMOVE_ITEM', productId }),
+        setQty: (productId: number, quantity: number) =>
           dispatch({ type: 'SET_QTY', productId, quantity }),
+        setItemNote: (productId: number, note: string) =>
+          dispatch({ type: 'SET_ITEM_NOTE', productId, note }),
         setOrderNote: (note: string) => dispatch({ type: 'SET_ORDER_NOTE', note }),
         clear: () => dispatch({ type: 'CLEAR' }),
       },
@@ -132,5 +148,6 @@ export function useCart() {
 export function cartTotals(items: CartItem[]) {
   const totalItems = items.reduce((acc, i) => acc + i.quantity, 0)
   const distinct = items.length
-  return { totalItems, distinct }
+  const withNotes = items.filter((i) => i.note && i.note.trim().length > 0).length
+  return { totalItems, distinct, withNotes }
 }

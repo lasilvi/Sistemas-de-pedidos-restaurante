@@ -83,7 +83,7 @@ class OrderProcessingServiceTest {
     }
     
     /**
-     * Test: processOrder with non-existent orderId does not throw exception
+     * Test: processOrder with non-existent orderId creates new order
      * 
      * Validates Requirements: 7.6
      */
