@@ -41,6 +41,25 @@ public class Product {
      */
     @Column(columnDefinition = "TEXT")
     private String description;
+
+    /**
+     * Product price in local currency.
+     * Stored as decimal to avoid floating-point precision issues.
+     */
+    @Column(nullable = false, precision = 10, scale = 2)
+    private java.math.BigDecimal price = java.math.BigDecimal.ZERO;
+
+    /**
+     * Product category used by frontend tabs (entradas, principales, postres, bebidas).
+     */
+    @Column(nullable = false, length = 50)
+    private String category = "otros";
+
+    /**
+     * Optional image URL for richer menu rendering.
+     */
+    @Column(name = "image_url", columnDefinition = "TEXT")
+    private String imageUrl;
     
     /**
      * Flag indicating whether the product is currently active and available for ordering.
@@ -49,4 +68,11 @@ public class Product {
      */
     @Column(name = "is_active", nullable = false)
     private Boolean isActive = true;
+
+    public Product(Long id, String name, String description, Boolean isActive) {
+        this.id = id;
+        this.name = name;
+        this.description = description;
+        this.isActive = isActive;
+    }
 }

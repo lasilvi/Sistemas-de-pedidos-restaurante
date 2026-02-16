@@ -27,5 +27,5 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
      * 
      * Validates Requirements: 1.1, 1.3
      */
-    List<Product> findByIsActiveTrue();
+    List<Product> findByIsActiveTrueOrderByIdAsc();
 }

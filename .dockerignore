@@ -1,0 +1,10 @@
+.git
+.gitignore
+node_modules
+dist
+coverage
+**/target
+**/.idea
+**/.vscode
+**/.DS_Store
+**/tsconfig*.tsbuildinfo

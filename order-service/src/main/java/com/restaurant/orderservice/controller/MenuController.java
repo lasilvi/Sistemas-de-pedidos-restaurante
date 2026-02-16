@@ -21,45 +21,23 @@ import java.util.List;
 
 /**
  * REST Controller for menu operations.
- * 
- * Provides endpoints for retrieving menu information, specifically active products
- * that can be ordered by restaurant staff.
- * 
- * Validates Requirements: 1.1
  */
 @RestController
 @RequestMapping("/menu")
 @Tag(name = "Menu", description = "Menu management endpoints for retrieving active products")
 public class MenuController {
-    
+
     private final MenuService menuService;
-    
-    /**
-     * Constructor for MenuController.
-     * 
-     * @param menuService Service for menu operations
-     */
+
     @Autowired
     public MenuController(MenuService menuService) {
         this.menuService = menuService;
     }
-    
-    /**
-     * GET /menu endpoint to retrieve active products.
-     * 
-     * Returns a list of all active products available for ordering.
-     * Products are filtered to include only those with isActive = true.
-     * 
-     * @return ResponseEntity with 200 OK status and list of ProductResponse
-     * 
-     * Validates Requirements:
-     * - 1.1: Order Service exposes GET /menu endpoint that returns active products
-     */
+
     @GetMapping
     @Operation(
             summary = "Get active menu products",
-            description = "Retrieves all active products available for ordering. " +
-                    "Only products with isActive=true are returned."
+            description = "Retrieves all active products available for ordering."
     )
     @ApiResponses(value = {
             @ApiResponse(
@@ -74,18 +52,21 @@ public class MenuController {
                                             [
                                               {
                                                 "id": 1,
-                                                "name": "Pizza Margherita",
-                                                "description": "Pizza clásica con tomate, mozzarella y albahaca"
+                                                "name": "Empanadas criollas",
+                                                "description": "Empanadas de carne con salsa casera.",
+                                                "price": 450,
+                                                "category": "entradas",
+                                                "imageUrl": "https://images.unsplash.com/photo-1603360946369-dc9bb6258143?w=400&h=300&fit=crop",
+                                                "isActive": true
                                               },
                                               {
-                                                "id": 2,
-                                                "name": "Hamburguesa Clásica",
-                                                "description": "Hamburguesa de carne con lechuga, tomate y queso"
-                                              },
-                                              {
-                                                "id": 3,
-                                                "name": "Ensalada César",
-                                                "description": "Ensalada fresca con pollo, parmesano y aderezo César"
+                                                "id": 5,
+                                                "name": "Bife de chorizo",
+                                                "description": "Corte premium con papas rusticas.",
+                                                "price": 1850,
+                                                "category": "principales",
+                                                "imageUrl": "https://images.unsplash.com/photo-1558030006-450675393462?w=400&h=300&fit=crop",
+                                                "isActive": true
                                               }
                                             ]
                                             """

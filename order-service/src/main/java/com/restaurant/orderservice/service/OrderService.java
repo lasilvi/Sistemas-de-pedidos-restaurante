@@ -6,10 +6,8 @@ import com.restaurant.orderservice.domain.event.OrderPlacedDomainEvent;
 import com.restaurant.orderservice.entity.Order;
 import com.restaurant.orderservice.entity.OrderItem;
 import com.restaurant.orderservice.enums.OrderStatus;
-import com.restaurant.orderservice.exception.InvalidOrderException;
 import com.restaurant.orderservice.exception.OrderNotFoundException;
 import com.restaurant.orderservice.repository.OrderRepository;
-import com.restaurant.orderservice.repository.ProductRepository;
 import com.restaurant.orderservice.service.command.OrderCommandExecutor;
 import com.restaurant.orderservice.service.command.PublishOrderPlacedEventCommand;
 import lombok.extern.slf4j.Slf4j;
@@ -39,7 +37,8 @@ import java.util.stream.Collectors;
 public class OrderService {
     
     private final OrderRepository orderRepository;
-    private final ProductRepository productRepository;
+    private final OrderValidator orderValidator;
+    private final OrderMapper orderMapper;
     private final OrderPlacedEventPublisherPort orderPlacedEventPublisherPort;
     private final OrderCommandExecutor orderCommandExecutor;
     
@@ -52,11 +51,13 @@ public class OrderService {
      */
     @Autowired
     public OrderService(OrderRepository orderRepository, 
-                       ProductRepository productRepository,
+                       OrderValidator orderValidator,
+                       OrderMapper orderMapper,
                        OrderPlacedEventPublisherPort orderPlacedEventPublisherPort,
                        OrderCommandExecutor orderCommandExecutor) {
         this.orderRepository = orderRepository;
-        this.productRepository = productRepository;
+        this.orderValidator = orderValidator;
+        this.orderMapper = orderMapper;
         this.orderPlacedEventPublisherPort = orderPlacedEventPublisherPort;
         this.orderCommandExecutor = orderCommandExecutor;
     }
@@ -208,7 +209,7 @@ public class OrderService {
         log.info("Order status updated successfully: orderId={}, status={}", 
                 updatedOrder.getId(), updatedOrder.getStatus());
         
-        return mapToOrderResponse(updatedOrder);
+        return orderMapper.mapToOrderResponse(updatedOrder);
     }
     
     /**
@@ -234,48 +235,6 @@ public class OrderService {
                 .tableId(order.getTableId())
                 .items(eventItems)
                 .createdAt(order.getCreatedAt())
-                .build();
-    }
-    
-    /**
-     * Maps an Order entity to an OrderResponse DTO.
-     * 
-     * @param order The Order entity to map
-     * @return OrderResponse DTO with complete order information
-     */
-    private OrderResponse mapToOrderResponse(Order order) {
-        List<OrderItemResponse> itemResponses = order.getItems().stream()
-                .map(this::mapToOrderItemResponse)
-                .collect(Collectors.toList());
-        
-        return OrderResponse.builder()
-                .id(order.getId())
-                .tableId(order.getTableId())
-                .status(order.getStatus())
-                .items(itemResponses)
-                .createdAt(order.getCreatedAt())
-                .updatedAt(order.getUpdatedAt())
-                .build();
-    }
-    
-    /**
-     * Maps an OrderItem entity to an OrderItemResponse DTO.
-     * 
-     * @param orderItem The OrderItem entity to map
-     * @return OrderItemResponse DTO with order item information including product name
-     */
-    private OrderItemResponse mapToOrderItemResponse(OrderItem orderItem) {
-        // Fetch product name
-        String productName = productRepository.findById(orderItem.getProductId())
-                .map(Product::getName)
-                .orElse("Producto desconocido");
-        
-        return OrderItemResponse.builder()
-                .id(orderItem.getId())
-                .productId(orderItem.getProductId())
-                .productName(productName)
-                .quantity(orderItem.getQuantity())
-                .note(orderItem.getNote())
                 .build();
     }
 }

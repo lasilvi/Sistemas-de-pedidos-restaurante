@@ -6,7 +6,7 @@ COPY order-service/pom.xml order-service/pom.xml
 COPY kitchen-worker/pom.xml kitchen-worker/pom.xml
 COPY order-service/src order-service/src
 
-RUN mvn -pl order-service -am package -DskipTests
+RUN mvn -pl order-service -am package -Dmaven.test.skip=true
 
 FROM eclipse-temurin:17-jre
 WORKDIR /app

@@ -27,10 +27,6 @@ import java.util.Optional;
 public class OrderProcessingService {
 
     private final OrderRepository orderRepository;
-
-    public OrderProcessingService(OrderRepository orderRepository) {
-        this.orderRepository = orderRepository;
-    }
     
     /**
      * Processes an order placed event by updating the order status to IN_PREPARATION.

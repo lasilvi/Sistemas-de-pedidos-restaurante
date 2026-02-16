@@ -43,11 +43,11 @@ public class MenuService {
      * 
      * Validates Requirements:
      * - 1.1: Order Service exposes GET /menu endpoint that returns active products
-     * - 1.2: When /menu is called, returns exactly 3 active products with id, name, description
+     * - 1.2: When /menu is called, returns active products with menu metadata
      * - 1.3: Order Service includes only products where isActive is true
      */
     public List<ProductResponse> getActiveProducts() {
-        List<Product> activeProducts = productRepository.findByIsActiveTrue();
+        List<Product> activeProducts = productRepository.findByIsActiveTrueOrderByIdAsc();
         
         return activeProducts.stream()
                 .map(this::mapToProductResponse)
@@ -65,6 +65,10 @@ public class MenuService {
                 .id(product.getId())
                 .name(product.getName())
                 .description(product.getDescription())
+                .price(product.getPrice())
+                .category(product.getCategory())
+                .imageUrl(product.getImageUrl())
+                .isActive(product.getIsActive())
                 .build();
     }
 }

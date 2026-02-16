@@ -33,4 +33,24 @@ public class ProductResponse {
      * Detailed description of the product.
      */
     private String description;
+
+    /**
+     * Product price.
+     */
+    private java.math.BigDecimal price;
+
+    /**
+     * Category label used by frontend tabs.
+     */
+    private String category;
+
+    /**
+     * Optional image URL.
+     */
+    private String imageUrl;
+
+    /**
+     * Active flag exposed for UI filtering.
+     */
+    private Boolean isActive;
 }
