@@ -58,7 +58,7 @@
 
   order-service:
     build:
-      context: .
+      context: ../..
       dockerfile: order-service/Dockerfile
     container_name: restaurant-order-service
     ports:
@@ -81,7 +81,7 @@
 
   kitchen-worker:
     build:
-      context: .
+      context: ../..
       dockerfile: kitchen-worker/Dockerfile
     container_name: restaurant-kitchen-worker
     restart: on-failure
@@ -105,7 +105,7 @@
 
   frontend:
     build:
-      context: .
+      context: ../..
       dockerfile: Dockerfile.frontend
     container_name: restaurant-frontend
     ports:
