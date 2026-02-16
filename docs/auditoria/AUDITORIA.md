@@ -1,194 +1,82 @@
-# AUDITORIA Fase 1 - Consolidado Final de Auditoria
+﻿# Auditoria tecnica fase 1 (consolidado)
 
-Estado: CONSOLIDADO (3 de 3 aportes integrados)
+## Metadatos
 
-## Baseline y contexto
+- Fecha de consolidacion: 2026-02-16
+- Snapshot base post-MVP: `51b8f5d`
+- Rama de trabajo de consolidacion: `develop`
+- Objetivo: mantener un unico reporte canonico de auditoria con trazabilidad hacia calidad y deuda tecnica.
 
-- Snapshot base post-MVP: `51b8f5d` (`audit: snapshot post-mvp`)
-- Rama de trabajo actual: `feature/auditoria-fase-1-diagnostico`
-- Alcance oficial: `docs/auditoria/ALCANCE_FASE1.md` (solo lectura)
-- Fuentes individuales:
-  - `docs/auditoria/hallazgos-nico.md`
-  - `docs/auditoria/hallazgos-companero-1.md` (Raul)
-  - `docs/auditoria/hallazgos-luis.md` (Luis)
+## Alcance de fase 1
 
-## Reglas de consolidacion aplicadas
+Componentes auditados:
+- Frontend React (cliente y cocina)
+- Order Service (Spring Boot)
+- Kitchen Worker (Spring Boot)
+- Integracion entre servicios (REST, RabbitMQ, DB)
 
-- Se consolidan por severidad y dominio tecnico, no por autor.
-- Hallazgos duplicados por misma causa raiz se fusionan en una sola entrada maestra.
-- Cada hallazgo incluye trazabilidad a su archivo fuente.
+Criterios evaluados:
+- Principios SOLID (SRP, DIP)
+- Code smells (acoplamiento, duplicacion, falta de abstraccion)
+- Riesgo operativo (seguridad, consistencia de eventos, confiabilidad)
 
-## Hallazgos consolidados (actuales)
+## Formato estandar por hallazgo
 
-### Severidad Alta
+Cada hallazgo mantiene:
+- Componente afectado
+- Evidencia tecnica reproducible
+- Principio vulnerado o smell
+- Impacto
+- Recomendacion
+- Estado de remediacion
 
-#### H-ALTA-01 - OrderService con responsabilidades mezcladas y riesgo N+1
+## Hallazgos consolidados
 
-- Dominio: Backend
-- Tipo: SOLID (SRP) + Code Smell
-- Descripcion consolidada: La clase `OrderService` concentra validacion, persistencia, mapeo y publicacion de eventos; adicionalmente consulta producto por cada item durante el mapeo de respuesta.
-- Evidencia:
-  - `order-service/src/main/java/com/restaurant/orderservice/service/OrderService.java:84-138`
-  - `order-service/src/main/java/com/restaurant/orderservice/service/OrderService.java:250-284`
-- Impacto: eleva costo de cambio y puede degradar rendimiento en consultas de pedidos con muchos items.
-- Fuentes: `docs/auditoria/hallazgos-nico.md#hallazgo-nico-001`
+| ID | Componente | Evidencia tecnica | Principio/smell | Impacto | Recomendacion | Estado |
+|---|---|---|---|---|---|---|
+| H-ALTA-01 | `order-service` | `order-service/src/main/java/com/restaurant/orderservice/service/OrderService.java` | SRP + God Class + riesgo N+1 | Alto | Separar validacion, mapeo y comandos de publicacion | Pagado |
+| H-ALTA-02 | Integracion eventos | `order-service/src/main/java/com/restaurant/orderservice/service/OrderService.java`, `order-service/src/main/java/com/restaurant/orderservice/infrastructure/messaging/RabbitOrderPlacedEventPublisher.java` | Consistencia eventual sin garantias explicitas | Alto | Comando de publicacion con manejo de error y transaccion coherente | Pagado |
+| H-ALTA-03 | Arquitectura de datos | `infrastructure/docker/docker-compose.yml`, `kitchen-worker/src/main/resources/application.yml` | Acoplamiento por DB compartida | Alto | Separar bases por servicio (restaurant_db / kitchen_db) | Pagado |
+| H-ALTA-04 | Contrato frontend-backend | `src/api/contracts.ts`, `order-service/src/main/java/com/restaurant/orderservice/dto/OrderItemRequest.java` | Inconsistencia de tipos (`productId`) | Alto | Alinear contrato a `number/Long` extremo a extremo | Pagado |
+| H-ALTA-05 | Seguridad cocina | `src/pages/kitchen/KitchenLoginPage.tsx`, `src/api/http.ts`, `order-service/src/main/resources/application.yml` | Control de acceso incompleto | Alto | Forzar header/token en endpoints de cocina y alinear PIN/token | Pagado |
+| H-ALTA-06 | Arquitectura global | Paquetes de servicio/controlador/infraestructura en backend | Falta de fronteras por capas | Alto | Mantener separacion en capas y puertos/comandos | Pagado parcial (base aplicada) |
+| H-MEDIA-01 | `kitchen-worker` | `kitchen-worker/src/main/java/com/restaurant/kitchenworker/listener/OrderEventListener.java`, `kitchen-worker/src/main/java/com/restaurant/kitchenworker/service/OrderProcessingService.java` | DIP debilitado por field injection | Medio | Constructor injection + pruebas ajustadas | Pagado |
+| H-MEDIA-02 | Frontend cocina | `src/pages/kitchen/KitchenBoardPage.tsx` | SRP debil en componente UI | Medio | Separar polling, acciones y detalle en unidades claras | Pagado parcial |
+| H-MEDIA-03 | Contrato de evento | Publicacion/consumo `order.placed` | Resiliencia de contrato | Medio | Validacion de payload, versionado y control de idempotencia | Pagado parcial |
+| H-BAJA-01 | Documentacion operativa | docs de workflow previas | Drift documental | Bajo | Consolidar docs canonicas y limpiar duplicados | Pagado |
+| H-BAJA-02 | Calidad no funcional | cobertura/observabilidad/hardening | Riesgo de escalado | Medio | Plan de observabilidad y cobertura minima por sprint | Pendiente |
 
-#### H-ALTA-02 - Gap de consistencia entre persistencia y publicacion de eventos
+## Evidencia consolidada de remediacion
 
-- Dominio: Integracion/Eventos
-- Tipo: Code Smell
-- Descripcion consolidada: El publisher captura excepciones de RabbitMQ y no corta el flujo, dejando orden persistida pero potencialmente no publicada.
-- Evidencia:
-  - `order-service/src/main/java/com/restaurant/orderservice/service/OrderEventPublisher.java:42-51`
-  - `order-service/src/main/java/com/restaurant/orderservice/service/OrderService.java:127-135`
-- Impacto: inconsistencias entre Order Service y Kitchen Worker ante fallos de broker.
-- Fuentes: `docs/auditoria/hallazgos-nico.md#hallazgo-nico-002`
-- Aciertos identificados (fragmentos ya existentes):
-  - `order-service/src/main/java/com/restaurant/orderservice/service/OrderService.java:85`: `createOrder` ya opera con `@Transactional`, base correcta para rollback transaccional.
-  - `order-service/src/main/java/com/restaurant/orderservice/service/OrderService.java:133`: el evento se construye desde la entidad persistida, evitando payload incompleto.
-  - `order-service/src/main/java/com/restaurant/orderservice/service/OrderEventPublisher.java:42`: la publicacion ya estaba encapsulada en un servicio dedicado, facilitando introducir un comando sin romper el controlador.
+Implementaciones verificadas en este corte:
+- Catalogo expandido real via backend (`GET /menu` con 16 items, precio, categoria, imagen)
+- Frontend en modo real por defecto (`VITE_USE_MOCK=false`) con fallback solo explicito
+- Seguridad de cocina alineada por token/header entre frontend y backend
+- Polling estable de cocina y acciones de cambio de estado con API real
+- Stack docker estable con RabbitMQ, Postgres y servicios Spring activos
 
-#### H-ALTA-03 - Microservicios acoplados por base de datos/tabla compartida
+Evidencia tecnica de ejecucion:
+- `docker compose -f infrastructure/docker/docker-compose.yml up -d --build`
+- `GET /menu` responde catalogo expandido
+- `POST /orders` crea pedido
+- `PATCH /orders/{id}/status` funciona con `X-Kitchen-Token`
+- `kitchen-worker` registra consumo de `order.placed` en logs
 
-- Dominio: Integracion/Arquitectura
-- Tipo: Code Smell
-- Descripcion consolidada: Order Service y Kitchen Worker usan misma DB y tabla `orders`, debilitando independencia de servicios.
-- Evidencia:
-  - `docker-compose.yml:48-50`
-  - `docker-compose.yml:70-72`
-  - `kitchen-worker/src/main/java/com/restaurant/kitchenworker/entity/Order.java:21-23`
-- Impacto: migraciones acopladas, riesgo de regresiones cruzadas, menor autonomia de despliegue.
-- Fuentes: `docs/auditoria/hallazgos-nico.md#hallazgo-nico-004`
+## Trazabilidad cruzada
 
-#### H-ALTA-04 - Contrato tipo `productId` inconsistente entre frontend y backend
+- Deuda tecnica consolidada: `docs/quality/DEUDA_TECNICA.md`
+- Evidencia de pruebas y release gate: `docs/quality/CALIDAD.md`
+- Cambio OpenSpec aplicado: `openspec/changes/main-production-readiness-doc-consolidation/`
 
-- Dominio: Frontend + API Contract
-- Tipo: Code Smell
-- Descripcion consolidada: Frontend usa `productId` string y backend espera Long.
-- Evidencia:
-  - `src/api/contracts.ts:15`
-  - `src/api/contracts.ts:36`
-  - `src/pages/client/CartPage.tsx:50`
-  - `order-service/src/main/java/com/restaurant/orderservice/dto/OrderItemRequest.java:19`
-- Impacto: potenciales errores 400 en entorno real y deuda de conversiones ad-hoc.
-- Fuentes: `docs/auditoria/hallazgos-nico.md#hallazgo-nico-005`
+## Riesgo residual
 
-#### H-ALTA-05 - Seguridad de cocina no aplicada de extremo a extremo
+Pendientes de siguiente iteracion:
+- H-BAJA-02: hardening no funcional (observabilidad, cobertura minima global, controles de abuso)
+- Completar separacion de responsabilidades en algunos componentes frontend de cocina
 
-- Dominio: Frontend + Backend Security
-- Tipo: Code Smell
-- Descripcion consolidada: Existe mecanismo de token/header en frontend, pero login de cocina entra directo y backend no valida cabecera de autorizacion en endpoints criticos.
-- Evidencia:
-  - `src/pages/kitchen/KitchenLoginPage.tsx:7-9`
-  - `src/api/env.ts:17-19`
-  - `src/api/http.ts:27-30`
-  - `order-service/src/main/java/com/restaurant/orderservice/controller/OrderController.java`
-- Impacto: operaciones de cocina sin control de acceso efectivo.
-- Fuentes: `docs/auditoria/hallazgos-nico.md#hallazgo-nico-006`
-- Aciertos identificados (fragmentos ya existentes):
-  - `src/store/kitchenAuth.ts`: ya existia almacenamiento de token en `sessionStorage`, reutilizable para guardas de ruta.
-  - `src/api/http.ts`: ya existia soporte para inyectar header de token por request.
-  - `src/api/env.ts`: ya existian variables de entorno para nombre de header, PIN y token fijo, base para alinear frontend/backend.
+## Cierre de fase 1
 
-#### H-ALTA-06 - Ausencia de capas arquitectonicas claras entre dominio/aplicacion/infraestructura
-
-- Dominio: Arquitectura global
-- Tipo: Code Smell
-- Descripcion consolidada: La estructura actual mezcla logica de negocio, orquestacion y detalles de infraestructura sin fronteras explicitas por capa.
-- Evidencia:
-  - `docs/auditoria/hallazgos-companero-1.md` (secciones 4.1 y 4.2)
-  - `docs/auditoria/hallazgos-luis.md` (hallazgos H-01, H-04, H-07)
-- Impacto: incrementa acoplamiento transversal y costo de evolucion.
-- Fuentes: `docs/auditoria/hallazgos-companero-1.md`, `docs/auditoria/hallazgos-luis.md`
-
-### Severidad Media
-
-#### H-MEDIA-01 - Inyeccion por campo en kitchen-worker (DIP debilitado)
-
-- Dominio: Backend
-- Tipo: SOLID (DIP)
-- Descripcion consolidada: Dependencias de listener y servicio se inyectan por campo con `@Autowired` en lugar de constructor.
-- Evidencia:
-  - `kitchen-worker/src/main/java/com/restaurant/kitchenworker/listener/OrderEventListener.java:30-31`
-  - `kitchen-worker/src/main/java/com/restaurant/kitchenworker/service/OrderProcessingService.java:27-28`
-- Impacto: menor testabilidad y mayor acoplamiento al contenedor.
-- Fuentes: `docs/auditoria/hallazgos-nico.md#hallazgo-nico-003`
-
-#### H-MEDIA-02 - KitchenBoardPage concentra demasiadas responsabilidades
-
-- Dominio: Frontend
-- Tipo: SOLID (SRP) + Code Smell
-- Descripcion consolidada: Un componente maneja polling, fetch, agrupacion, mutacion y render extenso.
-- Evidencia:
-  - `src/pages/kitchen/KitchenBoardPage.tsx:14-52`
-  - `src/pages/kitchen/KitchenBoardPage.tsx:64-72`
-  - `src/pages/kitchen/KitchenBoardPage.tsx:152-167`
-  - `src/pages/kitchen/KitchenBoardPage.tsx:183-248`
-- Impacto: fragilidad ante cambios y mayor riesgo de regresion UI/estado.
-- Fuentes: `docs/auditoria/hallazgos-nico.md#hallazgo-nico-007`
-
-#### H-MEDIA-03 - Contrato de evento y modelo de integracion con baja resiliencia
-
-- Dominio: Integracion/Eventos
-- Tipo: SOLID + Code Smell
-- Descripcion consolidada: La publicacion/consumo de eventos carece de una estrategia robusta de recuperacion y versionado de contrato.
-- Evidencia:
-  - `docs/auditoria/hallazgos-luis.md` (H-04, H-06)
-  - `docs/auditoria/hallazgos-companero-1.md` (1.5, 2.3)
-- Impacto: riesgo de inconsistencia entre servicios cuando falla el broker o evoluciona el payload.
-- Fuentes: `docs/auditoria/hallazgos-luis.md`, `docs/auditoria/hallazgos-companero-1.md`
-
-### Severidad Baja
-
-#### H-BAJA-01 - Drift documental en workflow de IA/OpenSpec
-
-- Dominio: Workflow/Documentacion
-- Tipo: Code Smell
-- Descripcion consolidada: El documento operativo tiene comandos desalineados y codificacion degradada.
-- Evidencia:
-  - `AI_WORKFLOW.md:27-35`
-  - `AI_WORKFLOW.md:2-4`
-- Impacto: ruido operativo y errores de uso para nuevos colaboradores.
-- Fuentes: `docs/auditoria/hallazgos-nico.md#hallazgo-nico-008`
-
-#### H-BAJA-02 - Brechas de calidad no funcional (observabilidad, cobertura, hardening)
-
-- Dominio: Calidad transversal
-- Tipo: Code Smell
-- Descripcion consolidada: Se reportan gaps en observabilidad centralizada, cobertura de tests y endurecimiento (ej. rate limiting / control de abuso).
-- Evidencia:
-  - `docs/auditoria/hallazgos-companero-1.md` (4.4, 4.6, 5.2)
-  - `docs/auditoria/hallazgos-luis.md` (hallazgos de calidad no funcional)
-- Impacto: deteccion tardia de incidentes y mayor riesgo operativo en crecimiento.
-- Fuentes: `docs/auditoria/hallazgos-companero-1.md`, `docs/auditoria/hallazgos-luis.md`
-
-## Deduplicacion aplicada
-
-- Se fusionaron hallazgos equivalentes en estas lineas maestras:
-  - `OrderService` sobredimensionado (SRP/God class/N+1) reportado por Nico, Raul y Luis.
-  - Riesgo de consistencia por eventos (publisher + worker) reportado por Raul y Luis, y parcialmente por Nico.
-  - Acoplamiento arquitectonico y ausencia de fronteras limpias reportado por Raul y Luis.
-  - Debilidades de seguridad de cocina reportadas por Nico y validadas por criterios de Luis.
-
-## Mapeo hacia Fase 2 (patrones candidatos)
-
-- H-ALTA-01 -> Facade (orquestacion de creacion de orden) + Strategy (validaciones de entrada).
-- H-ALTA-02 -> Outbox pattern + Retry policy explicita.
-- H-ALTA-03 -> Anti-Corruption Layer / Event-carried state transfer.
-- H-MEDIA-02 -> Observer/Strategy para transiciones y polling desacoplado.
-
-## Mapeo hacia Fase 3 (entry points de refactor)
-
-- `order-service/src/main/java/com/restaurant/orderservice/service/OrderService.java`
-- `order-service/src/main/java/com/restaurant/orderservice/service/OrderEventPublisher.java`
-- `kitchen-worker/src/main/java/com/restaurant/kitchenworker/listener/OrderEventListener.java`
-- `kitchen-worker/src/main/java/com/restaurant/kitchenworker/service/OrderProcessingService.java`
-- `src/pages/kitchen/KitchenBoardPage.tsx`
-- `src/api/contracts.ts`
-- `src/pages/client/CartPage.tsx`
-- `AI_WORKFLOW.md`
-
-## Cierre de Fase 1
-
-- Consolidacion de hallazgos completada con aporte de 3 auditores.
-- Reporte listo para transicion a Fase 2 (patrones) y Fase 3 (refactor dirigido).
+La auditoria queda consolidada en un unico archivo canonico y con enlace directo a:
+- evidencias de calidad ejecutadas,
+- backlog de deuda tecnica,
+- artefactos OpenSpec del cambio aplicado.

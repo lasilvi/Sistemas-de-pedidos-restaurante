@@ -1,111 +1,84 @@
-# 🚀 Guía Rápida de Inicio
+﻿# Guia rapida
 
-Esta es una guía ultra-rápida para poner en marcha el sistema en menos de 5 minutos.
+## 1) Levantar todo en modo real (recomendado)
 
-## ⚡ Inicio Rápido (3 Pasos)
-
-### 1️⃣ Asegúrate de tener Docker Desktop corriendo
-
-```powershell
-docker ps
+```bash
+cp .env.example .env
+docker compose -f infrastructure/docker/docker-compose.yml up -d --build
 ```
 
-Si ves un error, abre Docker Desktop y espera a que inicie.
+Verificar estado:
 
-### 2️⃣ Copia el archivo de configuración
-
-```powershell
-Copy-Item .env.example .env
+```bash
+docker compose -f infrastructure/docker/docker-compose.yml ps
 ```
 
-### 3️⃣ Inicia todo el sistema
+## 2) URLs utiles
 
-```powershell
-docker-compose up -d --build
+- Frontend cliente/cocina: `http://localhost:5173`
+- API: `http://localhost:8080`
+- Swagger: `http://localhost:8080/swagger-ui.html`
+- RabbitMQ: `http://localhost:15672` (`guest/guest`)
+
+## 3) Smoke test minimo
+
+```bash
+curl http://localhost:8080/menu
+
+curl -X POST http://localhost:8080/orders \
+  -H "Content-Type: application/json" \
+  -d '{"tableId":5,"items":[{"productId":1,"quantity":2}]}'
 ```
 
-**¡Listo!** Espera 30-60 segundos mientras los servicios se inician.
+## 4) Cocina (PIN/token)
 
----
+Por defecto:
+- Header: `X-Kitchen-Token`
+- Token/PIN: `cocina123`
 
-## 🌐 Accede a las Aplicaciones
+Consulta de pedidos de cocina:
 
-| Aplicación | URL | Descripción |
-|------------|-----|-------------|
-| **Frontend Cliente** | http://localhost:5173 | Interfaz para hacer pedidos |
-| **Frontend Cocina** | http://localhost:5173/kitchen | Interfaz para gestionar pedidos (PIN: 1234) |
-| **API Backend** | http://localhost:8080 | API REST |
-| **Swagger UI** | http://localhost:8080/swagger-ui.html | Documentación interactiva |
-| **RabbitMQ** | http://localhost:15672 | Gestión de colas (guest/guest) |
-
----
-
-## 🧪 Prueba Rápida
-
-### Desde el Navegador
-
-1. Abre http://localhost:5173
-2. Ingresa número de mesa (ej: 5)
-3. Agrega productos al carrito
-4. Realiza el pedido
-5. Ve el estado del pedido
-
-### Desde PowerShell
-
-```powershell
-# Ver menú
-Invoke-RestMethod -Uri "http://localhost:8080/menu" -Method Get
-
-# Crear pedido
-$body = '{"tableId": 5, "items": [{"productId": 1, "quantity": 2}]}'
-Invoke-RestMethod -Uri "http://localhost:8080/orders" -Method Post -Body $body -ContentType "application/json"
+```bash
+curl "http://localhost:8080/orders?status=PENDING,IN_PREPARATION,READY" \
+  -H "X-Kitchen-Token: cocina123"
 ```
 
----
+## 5) Variables clave
 
-## 🛠️ Comandos Útiles
+Frontend:
+- `VITE_USE_MOCK=false`
+- `VITE_ALLOW_MOCK_FALLBACK=false`
+- `VITE_API_BASE_URL=http://localhost:8080`
 
-```powershell
-# Ver estado de los servicios
-docker-compose ps
+Backend:
+- `KITCHEN_TOKEN_HEADER=X-Kitchen-Token`
+- `KITCHEN_AUTH_TOKEN=cocina123`
 
-# Ver logs en tiempo real
-docker-compose logs -f
+## 6) Comandos de mantenimiento
 
-# Reiniciar todo
-docker-compose restart
+```bash
+# logs
+docker compose -f infrastructure/docker/docker-compose.yml logs -f
 
-# Detener todo
-docker-compose down
+# reiniciar stack
+docker compose -f infrastructure/docker/docker-compose.yml down
+docker compose -f infrastructure/docker/docker-compose.yml up -d --build
 
-# Limpiar todo y empezar de cero
-docker-compose down -v
-docker-compose up -d --build
+# limpiar volumenes
+docker compose -f infrastructure/docker/docker-compose.yml down -v
 ```
 
----
+## 7) Flujo OpenSpec (resumen)
 
-## 🐛 Problemas Comunes
+```bash
+openspec list --json
+openspec status --change <change-name> --json
+openspec instructions apply --change <change-name> --json
+```
 
-### "Cannot connect to Docker"
-→ Inicia Docker Desktop
+## 8) Troubleshooting rapido
 
-### "Port already in use"
-→ Ejecuta: `docker-compose down`
-
-### "Frontend no carga"
-→ Espera 30 segundos más, los servicios están iniciando
-
-### "Error 500 en la API"
-→ Verifica los logs: `docker-compose logs order-service`
-
----
-
-## 📚 Documentación Completa
-
-- [README.md](README.md) - Documentación completa del proyecto
-- [SISTEMA_FUNCIONANDO.md](SISTEMA_FUNCIONANDO.md) - Guía detallada de verificación
-
----
-
-**¿Necesitas ayuda?** Revisa la documentación completa o los logs de los servicios.
+- Frontend sin datos: validar `VITE_USE_MOCK=false` y `VITE_API_BASE_URL`.
+- Cocina sin permisos: validar token/header entre frontend y backend.
+- No llegan eventos: revisar `rabbitmq` y logs de `kitchen-worker`.
+- Menu reducido: verificar migracion `V5__expand_menu_catalog.sql` en `order-service`.
