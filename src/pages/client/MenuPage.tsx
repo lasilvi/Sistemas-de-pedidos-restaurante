@@ -5,10 +5,12 @@ import { ArrowLeft, Check, Clock3, Minus, Plus, Search, ShoppingCart } from 'luc
 import { AnimatePresence, motion } from 'motion/react'
 import { getMenu } from '@/api/menu'
 import type { Product } from '@/api/contracts'
+import { getLocalMenuImage } from '@/assets/menuImages'
 import { useApp } from '@/app/context'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { Loading } from '@/components/Loading'
 import { ErrorState } from '@/components/ErrorState'
+import { ProductImage } from '@/components/ProductImage'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -217,9 +219,12 @@ export function MenuPage() {
                     >
                       <div className="flex items-center gap-3">
                         <div className="h-24 w-24 overflow-hidden rounded-xl bg-muted">
-                          {product.imageUrl ? (
-                            <img src={product.imageUrl} alt={product.name} className="h-full w-full object-cover" />
-                          ) : null}
+                          <ProductImage
+                            src={getLocalMenuImage(product.name) ?? product.imageUrl}
+                            alt={product.name}
+                            category={product.category}
+                            className="h-full w-full object-cover"
+                          />
                         </div>
 
                         <div className="min-w-0 flex-1">

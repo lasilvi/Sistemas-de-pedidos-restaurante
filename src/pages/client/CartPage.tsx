@@ -6,8 +6,10 @@ import { motion } from 'motion/react'
 import { createOrder } from '@/api/orders'
 import { getMenu } from '@/api/menu'
 import type { CreateOrderRequest } from '@/api/contracts'
+import { getLocalMenuImage } from '@/assets/menuImages'
 import { useApp } from '@/app/context'
 import { ThemeToggle } from '@/components/ThemeToggle'
+import { ProductImage } from '@/components/ProductImage'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Textarea } from '@/components/ui/textarea'
@@ -31,9 +33,13 @@ export function CartPage() {
   const menuQ = useQuery({ queryKey: ['menu'], queryFn: getMenu })
 
   const productMap = useMemo(() => {
-    const map = new Map<number, { price: number; imageUrl?: string }>()
+    const map = new Map<number, { price: number; imageUrl?: string; category?: string }>()
     for (const product of menuQ.data ?? []) {
-      map.set(product.id, { price: product.price ?? 0, imageUrl: product.imageUrl })
+      map.set(product.id, {
+        price: product.price ?? 0,
+        imageUrl: getLocalMenuImage(product.name) ?? product.imageUrl,
+        category: product.category,
+      })
     }
     return map
   }, [menuQ.data])
@@ -141,9 +147,12 @@ export function CartPage() {
                   <Card className="p-4">
                     <div className="flex gap-3">
                       <div className="h-20 w-20 overflow-hidden rounded-xl bg-muted">
-                        {product?.imageUrl ? (
-                          <img src={product.imageUrl} alt={item.name} className="h-full w-full object-cover" />
-                        ) : null}
+                        <ProductImage
+                          src={product?.imageUrl}
+                          alt={item.name}
+                          category={product?.category}
+                          className="h-full w-full object-cover"
+                        />
                       </div>
 
                       <div className="flex-1">
