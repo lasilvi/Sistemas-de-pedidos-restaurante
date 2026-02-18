@@ -1,186 +1,218 @@
-# GitHub Copilot Instructions — Sistema de Pedidos de Restaurante
+# GitHub Copilot Instructions — Restaurant Ordering System
 
-## 1. Contexto del Proyecto (OBLIGATORIO)
-Este repositorio corresponde a un sistema full-stack de gestión de pedidos para restaurante,
-recibido en contexto de **legacy handover (Brownfield)**.
+## 1. Project Context (MANDATORY)
+This repository contains a full-stack restaurant ordering system,
+received under a **legacy handover (Brownfield)** context.
 
-⚠️ Regla crítica:
-- NO asumir greenfield
-- NO reescribir arquitectura
-- NO romper contratos existentes (REST, eventos AMQP, DB)
+⚠️ Critical rules:
+- DO NOT assume greenfield
+- DO NOT break existing functionality
+- DO NOT silently change external contracts (REST, AMQP events, DB schemas)
 
-El sistema es **event-driven** y los servicios **NO se comunican entre sí vía REST**.
-La única integración entre `order-service` y `kitchen-worker` es **RabbitMQ**.
+The system is **event-driven**.
+Backend services **MUST NOT call each other via REST**.
+The only allowed integration between `order-service` and `kitchen-worker`
+is **RabbitMQ**.
 
 ---
 
-## 2. Arquitectura General (NO VIOLAR)
+## 2. High-Level Architecture (DO NOT VIOLATE)
 
 ### Backend
-- Microservicios Java con **bases de datos separadas**
+- Java microservices with **fully separated databases**
 - `order-service`
-  - API REST
-  - Publica eventos `order.placed` (v1 exacta)
-  - Persiste en `restaurant_db`
+  - REST API
+  - Publishes `order.placed` events (version 1 strictly)
+  - Persists to `restaurant_db`
 - `kitchen-worker`
-  - Consumer AMQP
-  - Proyecta órdenes en `kitchen_db`
-  - NO expone endpoints HTTP
+  - AMQP consumer
+  - Projects orders into `kitchen_db`
+  - MUST NOT expose HTTP endpoints
 
-### Comunicación
-- REST → solo frontend ↔ order-service
+### Communication Rules
+- REST → frontend ↔ order-service only
 - AMQP → order-service → RabbitMQ → kitchen-worker
-- ❌ Prohibido: llamadas REST directas entre servicios
+- ❌ Forbidden: direct REST calls between backend services
 
 ---
 
-## 3. Reglas de Negocio CRÍTICAS (NO ROMPER)
+## 3. Critical Business Rules (MUST BE PRESERVED)
 
-### Validaciones
-- `tableId` debe ser entero positivo entre 1 y 12
-- Un pedido debe tener **al menos un ítem**
-- Todos los `productId` deben existir y estar activos (`is_active = true`)
+### Validation Rules
+- `tableId` must be a positive integer between 1 and 12
+- An order must contain **at least one item**
+- All `productId` values must exist and be active (`is_active = true`)
 
-### Estados
-- Nuevas órdenes siempre inician en `PENDING`
-- Estados válidos: `PENDING`, `IN_PREPARATION`, `READY`
-- ⚠️ El backend **no valida la secuencia** actualmente
-- El frontend valida transiciones vía `orderStatus.ts`
+### Order States
+- New orders ALWAYS start in `PENDING`
+- Valid states: `PENDING`, `IN_PREPARATION`, `READY`
+- The backend currently does NOT enforce transition guards
+- The frontend enforces transitions via `orderStatus.ts`
 
-### Eventos
-- Evento `order.placed`:
-  - `eventVersion` debe ser exactamente `1`
-  - Otro valor → **DLQ sin reintentos**
-- El kitchen-worker es **idempotente**
-  - Si la orden no existe, la crea (upsert)
-
----
-
-## 4. Seguridad (EXTREMADAMENTE SENSIBLE)
-
-- La cocina se autentica vía header `X-Kitchen-Token`
-- Token actual: `cocina123` (⚠️ embebido en frontend)
-- Implementación: **Chain of Responsibility**
-  - `KitchenEndpointScopeHandler`
-  - `KitchenTokenPresenceHandler`
-  - `KitchenTokenValueHandler`
-- ❌ NO introducir Spring Security, JWT o OAuth sin requerimiento explícito
-
-Copilot debe:
-- Señalar riesgos de seguridad
-- NO proponer cambios disruptivos sin contexto
-- Preferir mitigaciones documentadas antes que refactors grandes
+### Events
+- Event: `order.placed`
+  - `eventVersion` MUST be exactly `1`
+  - Any other value → send directly to DLQ (no retries)
+- The kitchen-worker MUST be **idempotent**
+  - If an order does not exist, it must be created (upsert behavior)
 
 ---
 
-## 5. Estilo de Código — Backend (Java / Spring)
+## 4. Security — Mitigation-Oriented Instructions (REFACTORING ALLOWED)
+
+Security weaknesses have been identified.
+**Refactoring and module rewrites ARE ALLOWED and ENCOURAGED** if they improve security,
+as long as external behavior remains compatible.
+
+Copilot MUST follow these instructions:
+
+### Kitchen Authentication
+- Replace hardcoded or frontend-exposed secrets with:
+  - Environment-based configuration
+  - Or backend-managed secrets
+- NEVER embed secrets in Vite `VITE_*` variables
+
+### Token Handling
+- Introduce token rotation capability
+- Avoid static shared secrets
+- Ensure tokens are validated server-side ONLY
+
+### Authorization
+- Centralize kitchen authorization logic
+- Consider replacing the current Chain of Responsibility
+  with a single, testable authorization module if clarity improves
+
+### Destructive Operations
+- Protect destructive endpoints (e.g. DELETE /orders) with:
+  - Secondary confirmation mechanisms
+  - Soft-delete strategies
+  - Audit logging (who, when, what)
+
+### Backend Enforcement
+- Move critical validation and state transition rules
+  from frontend-only logic into the backend
+- Frontend validation is NOT sufficient for security
+
+Copilot SHOULD:
+- Propose secure refactors
+- Introduce defensive programming
+- Add tests validating security rules
+
+Copilot MUST NOT:
+- Leave secrets exposed
+- Trust the frontend for authorization or state validation
+- Silence or ignore security-related failures
+
+---
+
+## 5. Backend Code Style — Java / Spring Boot
 
 - Java 17
 - Spring Boot 3.2.x
-- Lombok permitido (pero no abusar)
-- Preferir:
-  - Métodos pequeños
-  - Nombres explícitos
-  - Inmutabilidad cuando sea posible
+- Lombok allowed (avoid excessive magic)
+- Prefer:
+  - Small, explicit methods
+  - Clear naming
+  - Immutability where possible
 
-### Capas (respetar estrictamente)
-- controller → solo HTTP
-- application → casos de uso
-- domain → lógica pura
-- infrastructure → detalles técnicos
-- repository → acceso a datos
+### Layering (STRICT)
+- controller → HTTP only
+- application → use cases
+- domain → pure business logic
+- infrastructure → technical implementations
+- repository → persistence access
 
-❌ Prohibido:
-- Lógica de negocio en controllers
-- Acceso directo a repositorios desde controllers
-- Acoplar AMQP al dominio
-
----
-
-## 6. Estilo de Código — Frontend (React + TypeScript)
-
-- React 18 + TypeScript estricto
-- Vite como bundler
-- TailwindCSS para estilos
-- TanStack Query para datos remotos
-
-### Arquitectura
-- `pages/` → vistas
-- `components/` → UI reutilizable
-- `domain/` → reglas de negocio frontend
-- `api/` → contratos HTTP
-- `store/` → estado global (Context API)
-
-❌ Prohibido:
-- Lógica de negocio en componentes UI
-- Hardcodear estados fuera de `orderStatus.ts`
-- Duplicar contratos que ya existen en `contracts.ts`
+❌ Forbidden:
+- Business logic inside controllers
+- Direct repository access from controllers
+- AMQP concerns leaking into domain logic
 
 ---
 
-## 7. Testing (MANDATORIO)
+## 6. Frontend Code Style — React + TypeScript
 
-### Enfoque
-- **TDD obligatorio**
-- Tests antes del código
-- El historial de commits debe reflejar RED → GREEN → REFACTOR
+- React 18 with strict TypeScript
+- Vite as bundler
+- TailwindCSS for styling
+- TanStack Query for server state
+
+### Frontend Architecture
+- `pages/` → views
+- `components/` → reusable UI
+- `domain/` → frontend business rules
+- `api/` → HTTP contracts
+- `store/` → global state (Context API)
+
+❌ Forbidden:
+- Business rules inside UI components
+- Hardcoding state transitions outside `orderStatus.ts`
+- Duplicating contracts already defined in `contracts.ts`
+
+---
+
+## 7. Testing Strategy (MANDATORY)
+
+### Approach
+- **Test Driven Development (TDD) is mandatory**
+- Tests MUST be written before production code
+- Commit history must reflect RED → GREEN → REFACTOR
 
 ### Backend
 - JUnit 5
 - Mockito
-- H2 para tests
-- spring-rabbit-test para AMQP
-- jqwik para property-based testing (cuando aplique)
+- H2 for persistence tests
+- spring-rabbit-test for AMQP
+- jqwik for property-based testing when applicable
 
 ### Frontend
-- Tests enfocados en lógica y estados
-- Evitar tests frágiles de UI pura
+- Focus on domain logic and state transitions
+- Avoid brittle UI-only snapshot tests
 
-Copilot debe:
-- Proponer tests primero
-- Diseñar casos usando:
-  - Partición de equivalencia
-  - Valores límite
-  - Tablas de decisión si hay lógica compleja
-
----
-
-## 8. Uso Permitido de Copilot
-
-Copilot puede:
-- Generar boilerplate
-- Sugerir tests
-- Explicar código heredado
-- Proponer refactors **incrementales**
-
-Copilot NO debe:
-- Reescribir módulos completos
-- Cambiar contratos existentes
-- Introducir nuevas dependencias sin justificación
-- Asumir conocimiento fuera del repositorio
+Copilot MUST:
+- Propose tests first
+- Design test cases using:
+  - Equivalence Partitioning
+  - Boundary Value Analysis
+  - Decision Tables for complex logic
 
 ---
 
-## 9. Manejo de Incertidumbre
+## 8. Allowed Use of Copilot
 
-Si falta información:
-- Declarar supuestos explícitamente
-- Marcar dudas para el `HANDOVER_REPORT.md`
-- NO inventar comportamiento del sistema
+Copilot MAY:
+- Generate boilerplate code
+- Propose incremental refactors
+- Write tests and documentation
+- Explain legacy code
+
+Copilot MUST NOT:
+- Rewrite the entire system without intent
+- Change public contracts silently
+- Introduce new dependencies without justification
+- Assume behavior not present in the repository
 
 ---
 
-## 10. Objetivo Final
+## 9. Handling Uncertainty
 
-El objetivo NO es:
-❌ maximizar cambios  
-❌ modernizar todo  
-❌ “arreglar” el sistema  
+When information is missing:
+- State assumptions explicitly
+- Mark open questions for `HANDOVER_REPORT.md`
+- NEVER invent system behavior
 
-El objetivo es:
-✅ entender  
-✅ extender sin romper  
-✅ asegurar calidad  
-✅ documentar correctamente  
+---
 
-Copilot debe comportarse como **ingeniero senior en contexto de handover**.
+## 10. Final Objective
+
+The goal is NOT:
+❌ to modernize everything  
+❌ to maximize changes  
+❌ to “fix” the system blindly  
+
+The goal IS:
+✅ to understand the system  
+✅ to evolve it safely  
+✅ to improve quality and security  
+✅ to document decisions clearly  
+
+Copilot must act as a **senior engineer in a legacy handover scenario**.
