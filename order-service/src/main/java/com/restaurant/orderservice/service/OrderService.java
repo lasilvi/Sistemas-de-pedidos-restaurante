@@ -132,20 +132,22 @@ public class OrderService {
     
     /**
      * Retrieves an order by its unique identifier.
+     * Only returns active (non-deleted) orders.
      * 
      * @param orderId UUID of the order to retrieve
      * @return OrderResponse with complete order details
-     * @throws OrderNotFoundException if the order does not exist
+     * @throws OrderNotFoundException if the order does not exist or is deleted
      * 
      * Validates Requirements:
      * - 4.1: Order Service exposes GET /orders/{id} endpoint
      * - 4.2: Returns complete order with all items, status, and timestamps
+     * - SoftDelete: Excludes deleted orders (Copilot Instructions Section 4)
      */
     @Transactional(readOnly = true)
     public OrderResponse getOrderById(UUID orderId) {
         log.info("Retrieving order by id: {}", orderId);
         
-        Order order = orderRepository.findById(orderId)
+        Order order = orderRepository.findByIdActive(orderId)
                 .orElseThrow(() -> new OrderNotFoundException(orderId));
         
         // Delegate mapping to OrderMapper
@@ -154,9 +156,10 @@ public class OrderService {
     
     /**
      * Retrieves orders, optionally filtered by status.
+     * Only returns active (non-deleted) orders.
      * 
-     * If status is null, returns all orders.
-     * If status is provided, returns only orders with that status.
+     * If status is null, returns all active orders.
+     * If status is provided, returns only active orders with that status.
      * 
      * @param status Optional OrderStatus to filter by (can be null)
      * @return List of OrderResponse matching the filter criteria
@@ -164,6 +167,7 @@ public class OrderService {
      * Validates Requirements:
      * - 5.1: Order Service exposes GET /orders with optional status parameter
      * - 5.2: Returns only orders matching the specified status when provided
+     * - Soft Delete: Excludes deleted orders (Copilot Instructions Section 4)
      */
     @Transactional(readOnly = true)
     public List<OrderResponse> getOrders(List<OrderStatus> status) {
@@ -171,11 +175,11 @@ public class OrderService {
         
         List<Order> orders;
         if (status == null || status.isEmpty()) {
-            // Return all orders
-            orders = orderRepository.findAll();
+            // Return all active orders (exclude deleted)
+            orders = orderRepository.findAllActive();
         } else {
-            // Return orders filtered by any of the provided statuses
-            orders = orderRepository.findByStatusIn(status);
+            // Return active orders filtered by any of the provided statuses
+            orders = orderRepository.findByStatusInActive(status);
         }
         
         // Delegate mapping to OrderMapper (optimized for batch)
@@ -184,23 +188,31 @@ public class OrderService {
     
     /**
      * Updates the status of an existing order.
+     * Only updates active (non-deleted) orders.
      * 
      * The updatedAt timestamp is automatically updated by the @PreUpdate callback.
      * 
      * @param orderId UUID of the order to update
      * @param newStatus New status to set for the order
      * @return OrderResponse with updated order details
-     * @throws OrderNotFoundException if the order does not exist
+     * @throws OrderNotFoundException if the order does not exist or is deleted
+     * @throws InvalidStatusTransitionException if the transition is not valid
      * 
      * Validates Requirements:
      * - 6.2: Updates order status and updatedAt timestamp
+     * - Security: Validates status transition before applying (Copilot Instructions Section 4)
+     * - Soft Delete: Only updates active orders (Copilot Instructions Section 4)
      */
     @Transactional
     public OrderResponse updateOrderStatus(UUID orderId, OrderStatus newStatus) {
         log.info("Updating order status: orderId={}, newStatus={}", orderId, newStatus);
         
-        Order order = orderRepository.findById(orderId)
+        Order order = orderRepository.findByIdActive(orderId)
                 .orElseThrow(() -> new OrderNotFoundException(orderId));
+        
+        // ⚠️ SECURITY: Validate status transition (Backend Enforcement)
+        // Copilot Instructions Section 4: "Backend debe rechazar cambios de estado que no respeten el flujo definido"
+        OrderStatus.validateTransition(order.getStatus(), newStatus);
         
         order.setStatus(newStatus);
         // updatedAt is automatically updated by @PreUpdate
@@ -213,32 +225,61 @@ public class OrderService {
     }
 
     /**
-     * Deletes a single order by id.
+     * Soft-deletes a single order by id.
+     * 
+     * The order is not physically removed from the database.
+     * Instead, it is marked as deleted for audit purposes.
+     * 
+     * Cumple con Copilot Instructions:
+     * - Sección 4: Security - Destructive Operations
+     * - "Implementar soft delete (campo is_deleted, deleted_at, etc.)"
+     * - "No permitir eliminación irreversible sin controles adicionales"
      *
      * @param orderId UUID of the order to delete
-     * @throws OrderNotFoundException if the order does not exist
+     * @throws OrderNotFoundException if the order does not exist or is already deleted
      */
     @Transactional
     public void deleteOrder(UUID orderId) {
-        log.info("Deleting order: orderId={}", orderId);
+        log.info("Soft-deleting order: orderId={}", orderId);
 
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new OrderNotFoundException(orderId));
 
-        orderRepository.delete(order);
-        log.info("Order deleted successfully: orderId={}", orderId);
+        // ⚠️ SECURITY: Soft delete instead of hard delete (Backend Enforcement)
+        order.markAsDeleted();
+        orderRepository.save(order);
+        
+        log.info("Order soft-deleted successfully: orderId={}, deletedAt={}", 
+                orderId, order.getDeletedAt());
     }
 
     /**
-     * Deletes all orders.
+     * Soft-deletes all active orders.
+     * 
+     * Orders are not physically removed from the database.
+     * Instead, they are marked as deleted for audit purposes.
+     * 
+     * Cumple con Copilot Instructions:
+     * - Sección 4: Security - Destructive Operations
+     * - "Implementar soft delete (campo is_deleted, deleted_at, etc.)"
+     * - "Añadir auditoría (who, when, what)"
      *
-     * @return number of deleted orders
+     * @return number of soft-deleted orders
      */
     @Transactional
     public long deleteAllOrders() {
-        long count = orderRepository.count();
-        log.info("Deleting all orders: count={}", count);
-        orderRepository.deleteAll();
+        List<Order> activeOrders = orderRepository.findAllActive();
+        long count = activeOrders.size();
+        
+        log.info("Soft-deleting all active orders: count={}", count);
+        
+        // ⚠️ SECURITY: Soft delete instead of hard delete (Backend Enforcement)
+        activeOrders.forEach(order -> {
+            order.markAsDeleted();
+            orderRepository.save(order);
+        });
+        
+        log.info("All active orders soft-deleted successfully: count={}", count);
         return count;
     }
     

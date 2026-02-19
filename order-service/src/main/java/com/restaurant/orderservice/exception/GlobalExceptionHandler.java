@@ -89,6 +89,31 @@ public class GlobalExceptionHandler {
     }
     
     /**
+     * Handles InvalidStatusTransitionException.
+     * Returns 400 Bad Request when an invalid status transition is attempted.
+     * 
+     * Cumple con Copilot Instructions:
+     * - Sección 4: Security - Backend Enforcement
+     * - "Backend debe rechazar cambios de estado que no respeten el flujo definido"
+     * 
+     * @param ex the InvalidStatusTransitionException that was thrown
+     * @return ResponseEntity with ErrorResponse and 400 status
+     * 
+     * Validates Requirements: 11.1, Security Requirement
+     */
+    @ExceptionHandler(InvalidStatusTransitionException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidStatusTransition(InvalidStatusTransitionException ex) {
+        log.warn("Invalid status transition attempted: {}", ex.getMessage());
+        ErrorResponse error = ErrorResponse.builder()
+                .timestamp(LocalDateTime.now())
+                .status(HttpStatus.BAD_REQUEST.value())
+                .error("Invalid Status Transition")
+                .message(ex.getMessage())
+                .build();
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+    }
+    
+    /**
      * Handles MethodArgumentNotValidException.
      * Returns 400 Bad Request when request validation fails (e.g., @Valid annotations).
      * Collects all field validation errors into a single message.
