@@ -120,6 +120,23 @@ public class Order {
     }
     
     /**
+     * Updates the order status with validation.
+     * Validates that the transition from current status to new status is allowed.
+     * 
+     * Allowed transitions:
+     * - PENDING -> IN_PREPARATION
+     * - IN_PREPARATION -> READY
+     * - READY -> (no transitions allowed)
+     * 
+     * @param newStatus the new status to transition to
+     * @throws com.restaurant.orderservice.exception.InvalidStatusTransitionException if transition is invalid
+     */
+    public void updateStatus(OrderStatus newStatus) {
+        OrderStatus.validateTransition(this.status, newStatus);
+        this.status = newStatus;
+    }
+    
+    /**
      * Marks this order as soft-deleted.
      * Sets the deleted flag to true and records the deletion timestamp.
      */
