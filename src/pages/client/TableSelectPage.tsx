@@ -1,10 +1,12 @@
-﻿import { useMemo } from 'react'
+﻿import { useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { ChefHat, Clock3, UtensilsCrossed } from 'lucide-react'
 import { motion } from 'motion/react'
+import { HttpError } from '@/api/http'
 import { listOrders } from '@/api/orders'
 import { OCCUPIED_TABLE_STATUSES } from '@/domain/orderStatus'
+import { clearKitchenToken } from '@/store/kitchenAuth'
 import { useApp } from '@/app/context'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { Card } from '@/components/ui/card'
@@ -16,11 +18,26 @@ const TABLE_COUNT = 12
 export function TableSelectPage() {
   const navigate = useNavigate()
   const { tableNumber, setTableNumber } = useApp()
+  const [shouldPoll, setShouldPoll] = useState(true)
 
   const occupancyQ = useQuery({
     queryKey: ['table-occupancy'],
-    queryFn: () => listOrders({ status: OCCUPIED_TABLE_STATUSES }),
-    refetchInterval: 5000,
+    queryFn: async () => {
+      try {
+        return await listOrders({ status: OCCUPIED_TABLE_STATUSES })
+      } catch (err) {
+        // Handle 401 authentication errors - clear invalid token and stop polling
+        if (err instanceof HttpError && err.status === 401) {
+          clearKitchenToken()
+          setShouldPoll(false)
+        }
+        throw err
+      }
+    },
+    refetchInterval: shouldPoll ? 5000 : false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    retry: false,
   })
 
   const tables = useMemo(() => Array.from({ length: TABLE_COUNT }, (_, index) => index + 1), [])
