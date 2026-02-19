@@ -15,8 +15,8 @@ public class KitchenSecurityInterceptor implements HandlerInterceptor {
     private final KitchenSecurityHandler securityChain;
 
     public KitchenSecurityInterceptor(
-            @Value("${security.kitchen.token-header:X-Kitchen-Token}") String tokenHeaderName,
-            @Value("${security.kitchen.token-value:1234}") String expectedToken) {
+            @Value("${security.kitchen.token-header}") String tokenHeaderName,
+            @Value("${security.kitchen.token-value}") String expectedToken) {
         KitchenEndpointScopeHandler scopeHandler = new KitchenEndpointScopeHandler();
         KitchenTokenPresenceHandler presenceHandler = new KitchenTokenPresenceHandler(tokenHeaderName);
         KitchenTokenValueHandler valueHandler = new KitchenTokenValueHandler(tokenHeaderName, expectedToken);

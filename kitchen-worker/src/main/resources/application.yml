@@ -2,9 +2,9 @@
   application:
     name: kitchen-worker
   datasource:
-    url: ${KITCHEN_DB_URL:jdbc:postgresql://localhost:5433/kitchen_db}
-    username: ${KITCHEN_DB_USER:kitchen_user}
-    password: ${KITCHEN_DB_PASS:kitchen_pass}
+    url: ${KITCHEN_DB_URL}
+    username: ${KITCHEN_DB_USER}
+    password: ${KITCHEN_DB_PASS}
     driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:
@@ -14,10 +14,10 @@
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
   rabbitmq:
-    host: ${RABBITMQ_HOST:localhost}
-    port: ${RABBITMQ_PORT:5672}
-    username: ${RABBITMQ_USER:guest}
-    password: ${RABBITMQ_PASS:guest}
+    host: ${RABBITMQ_HOST}
+    port: ${RABBITMQ_PORT}
+    username: ${RABBITMQ_USER}
+    password: ${RABBITMQ_PASS}
     listener:
       simple:
         retry:
@@ -32,16 +32,17 @@
     baseline-on-migrate: true
 
 server:
-  port: 8081
+  port: ${KITCHEN_WORKER_PORT}
 
 rabbitmq:
   exchange:
-    name: order.exchange
+    name: ${RABBITMQ_EXCHANGE_NAME}
   queue:
-    name: order.placed.queue
+    name: ${RABBITMQ_KITCHEN_QUEUE_NAME}
   routing-key:
-    order-placed: order.placed
+    order-placed: ${RABBITMQ_ROUTING_KEY_ORDER_PLACED}
   dlq:
-    name: order.placed.dlq
-    exchange: order.dlx
+    name: ${RABBITMQ_KITCHEN_DLQ_NAME}
+    exchange: ${RABBITMQ_KITCHEN_DLX_NAME}
+    routing-key: ${RABBITMQ_DLQ_ROUTING_KEY}
 
