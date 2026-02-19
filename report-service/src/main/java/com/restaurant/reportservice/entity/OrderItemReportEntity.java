@@ -22,13 +22,13 @@ public class OrderItemReportEntity {
     @Column(name = "product_id", nullable = false)
     private Long productId;
 
-    @Column(name = "product_name", nullable = false)
+    @Column(name = "product_name", nullable = true)
     private String productName;
 
     @Column(name = "quantity", nullable = false)
     private Integer quantity;
 
-    @Column(name = "price", nullable = false, precision = 10, scale = 2)
+    @Column(name = "price", nullable = true, precision = 10, scale = 2)
     private BigDecimal price;
 
     @ManyToOne(fetch = FetchType.LAZY)
