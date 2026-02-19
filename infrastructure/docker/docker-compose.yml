@@ -37,6 +37,25 @@
     networks:
       - restaurant-net
 
+  report-postgres:
+    image: postgres:15
+    container_name: report-postgres
+    environment:
+      POSTGRES_DB: ${REPORT_POSTGRES_DB:-report_db}
+      POSTGRES_USER: ${REPORT_POSTGRES_USER:-report_user}
+      POSTGRES_PASSWORD: ${REPORT_POSTGRES_PASSWORD:-report_pass}
+    ports:
+      - "5434:5432"
+    volumes:
+      - report_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${REPORT_POSTGRES_USER:-report_user} -d ${REPORT_POSTGRES_DB:-report_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - restaurant-net
+
   rabbitmq:
     image: rabbitmq:3-management
     container_name: restaurant-rabbitmq
@@ -105,6 +124,29 @@
     networks:
       - restaurant-net
 
+  report-service:
+    build:
+      context: ../..
+      dockerfile: report-service/Dockerfile
+    container_name: restaurant-report-service
+    ports:
+      - "8082:8082"
+    environment:
+      DB_URL: ${REPORT_DB_URL:-jdbc:postgresql://report-postgres:5432/report_db}
+      DB_USER: ${REPORT_DB_USER:-report_user}
+      DB_PASS: ${REPORT_DB_PASS:-report_pass}
+      RABBITMQ_HOST: ${RABBITMQ_HOST:-rabbitmq}
+      RABBITMQ_PORT: ${RABBITMQ_PORT:-5672}
+      RABBITMQ_USER: ${RABBITMQ_USER:-guest}
+      RABBITMQ_PASS: ${RABBITMQ_PASS:-guest}
+    depends_on:
+      report-postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - restaurant-net
+
   frontend:
     build:
       context: ../..
@@ -127,6 +169,7 @@
 volumes:
   postgres_data:
   kitchen_postgres_data:
+  report_postgres_data:
   rabbitmq_data:
 
 networks:
