@@ -1,6 +1,6 @@
 # 📋 Handover Report - Sistema de Pedidos de Restaurante
 
-**Proyecto:** Restaurant Order System
+**Proyecto:** Sistema de Pedidos de Restaurante
 
 El sistema permite gestionar pedidos en un restaurante
 separando la lógica de toma de pedidos y preparación
@@ -47,6 +47,7 @@ Arquitectura en Capas:
 ```
 Dependencias Principales:
 
+```
 Spring Boot Web → REST API
 Spring Data JPA → ORM para PostgreSQL
 Spring AMQP → Publicación de eventos a RabbitMQ
@@ -54,6 +55,9 @@ Spring Validation → Validación de DTOs
 Flyway → Migraciones de base de datos
 SpringDoc OpenAPI → Documentación Swagger
 Lombok → Reducción de boilerplate
+
+```
+
 Responsabilidades:
 
 ✅ Gestionar pedidos (CRUD)
@@ -76,11 +80,14 @@ Arquitectura Event-Driven:
 ```
 Dependencias Principales:
 
+```
 Spring Boot (sin Web, solo worker)
 Spring Data JPA → Base de datos independiente
 Spring AMQP → Consumo de mensajes RabbitMQ
 Flyway → Migraciones
 Jackson → Deserialización JSON
+```
+
 Responsabilidades:
 
 ✅ Escuchar eventos order.placed desde RabbitMQ
@@ -231,41 +238,38 @@ sequenceDiagram
 
 ### 🔴 Alto Impacto
 
-1. **Comunicación entre microservicios no documentada**
-   - ¿Cómo se comunican `order-service` y `kitchen-worker`?
-   - ¿REST, eventos, mensajería (RabbitMQ/Kafka)?
-   - **Acción:** Documentar protocolo de comunicación
+1. **PIN en variable VITE_**
+   - el secreto cocina123 queda embebido en el bundle JS, visible en DevTools
 
-2. **Falta de especificación OpenAPI**
-   - Carpeta [openspec/](openspec/) existe pero contenido desconocido
-   - **Acción:** Verificar si existe especificación Swagger/OpenAPI actualizada
-
-3. **Configuración de entorno incompleta**
-   - [.env](.env) y [.env.example](.env.example) presentes
-   - **Acción:** Validar variables de entorno necesarias
 
 ### 🟡 Medio Impacto
 
-4. **Dockerización parcial**
-   - Múltiples Dockerfiles: [Dockerfile](Dockerfile), [Dockerfile.frontend](Dockerfile.frontend)
-   - ¿Existe docker-compose.yml funcional?
-   - **Acción:** Verificar orquestación completa
+2. **Sin guardia de transición en backend**
+   - PATCH /orders/{id}/status acepta cualquier status válido directamente; solo el frontend valida la secuencia
 
-5. **Testing avanzado sin cobertura conocida**
-   - Uso de jqwik (Property-Based Testing) indica madurez
-   - Cobertura actual desconocida
-   - **Acción:** Generar reporte de cobertura
+3. **Inconsistencia entre DBs**
+   - ventana de tiempo entre que order-service guarda la orden y kitchen-worker la procesa; no hay reconciliación si el mensaje se pierde definitivamente
 
-6. **Dependencia obsolescencia**
-   - Spring Boot 3.2.0 (lanzado late 2023)
-   - **Acción:** Revisar actualizaciones de seguridad
+4. **order-service nunca se entera del estado real de cocina**
+   - el kitchen-worker actualiza kitchen_db pero nunca notifica de vuelta; GET /orders/{id} refleja solo lo que sabe order-service
+
+5. **Versioning rígido de eventos**
+   - si se sube eventVersion a 2, todos los eventos van al DLQ hasta que kitchen-worker se actualice en lockstep
+
+6. **Polling agresivo**
+   - KitchenBoardPage hace GET cada 3s; múltiples pantallas de cocina abiertas multiplican la carga sin WebSocket/SSE
+
 
 ### 🟢 Bajo Impacto
 
-7. **Documentación fragmentada**
-   - Existe [docs/](docs/) con auditoría, desarrollo, calidad
-   - [AI_WORKFLOW.md](AI_WORKFLOW.md) sugiere flujo con IA
-   - **Acción:** Consolidar documentación técnica
+7. **DELETE /orders borra todo con un solo token de cocina**
+   - sin soft-delete, sin confirmación secundaria, sin audit log
+
+8. **Credenciales por defecto en docker-compose**
+   - RabbitMQ guest/guest, PostgreSQL restaurant_pass, token cocina123 en texto plano
+
+9. **Posible mismatch ORM/DB**
+   - migraciones usan order_item (singular); entidad JPA mapea a order_items (plural). Requiere verificar alineación
 
 ---
 
