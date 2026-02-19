@@ -2,6 +2,13 @@
 
 **Proyecto:** Restaurant Order System
 
+El sistema permite gestionar pedidos en un restaurante
+separando la lógica de toma de pedidos y preparación
+mediante arquitectura basada en eventos.
+
+Estado actual: MVP funcional 
+
+---
 
 ## 🏗️ Arquitectura General
 
@@ -10,27 +17,17 @@ Sistema **Full-Stack** con arquitectura de **microservicios**
 
 Componentes Principales
 
-┌─────────────────┐       ┌──────────────────┐       ┌─────────────────┐
-│  Frontend (SPA) │◄─────►│  Order Service   │◄─────►│   PostgreSQL    │
-│  React + Vite   │  REST │  Spring Boot     │  JPA  │ restaurant_db   │
-└─────────────────┘       └──────────────────┘       └─────────────────┘
-                                    │
-                                    │ AMQP (Events)
-                                    ▼
-                          ┌──────────────────┐
-                          │    RabbitMQ      │
-                          │  Message Broker  │
-                          └──────────────────┘
-                                    │
-                                    │ Consumer
-                                    ▼
-                          ┌──────────────────┐       ┌─────────────────┐
-                          │  Kitchen Worker  │◄─────►│   PostgreSQL    │
-                          │  Spring Boot     │  JPA  │   kitchen_db    │
-                          └──────────────────┘       └─────────────────┘
+| Componente     | Tipo                | Tecnología        | Responsabilidad Principal | Base de Datos |
+| -------------- | ------------------- | ----------------- | ------------------------- | ------------- |
+| Frontend SPA   | Cliente Web         | React + Vite + TS | Interfaz cliente y cocina | —             |
+| Order Service  | Microservicio REST  | Spring Boot       | Gestión de pedidos        | restaurant_db |
+| RabbitMQ       | Broker              | AMQP              | Comunicación asíncrona    | —             |
+| Kitchen Worker | Worker Event-Driven | Spring Boot       | Procesamiento de pedidos  | kitchen_db    |
+
 
 Backend: Arquitectura Java Multi-Módulo
 
+```
 1️⃣ Order Service (Servicio Principal)
 Arquitectura en Capas:
 📂 order-service/src/main/java/com/restaurant/orderservice/
@@ -47,6 +44,7 @@ Arquitectura en Capas:
 ├── 🚨 exception/           → Manejo de errores
 └── 🔢 enums/               → Enumeraciones (OrderStatus, etc.)
 
+```
 Dependencias Principales:
 
 Spring Boot Web → REST API
@@ -66,6 +64,7 @@ Responsabilidades:
 2️⃣ Kitchen Worker (Event Consumer)
 Arquitectura Event-Driven:
 
+```
 📂 kitchen-worker/src/main/java/
 ├── 📥 consumer/            → Listeners de RabbitMQ
 ├── 🔧 service/             → Procesamiento de eventos
@@ -74,6 +73,7 @@ Arquitectura Event-Driven:
 ├── 📝 dto/                 → Eventos recibidos
 └── ⚙️  config/             → Configuración AMQP
 
+```
 Dependencias Principales:
 
 Spring Boot (sin Web, solo worker)
@@ -96,6 +96,8 @@ TypeScript → Tipado estático
 Tailwind CSS → Utility-first CSS
 ESLint → Linting
 Arquitectura Frontend (Clean Architecture)
+
+```
 
 📂 src/
 ├── 📄 pages/
@@ -131,10 +133,9 @@ Arquitectura Frontend (Clean Architecture)
 └── 📱 app/
     └── context.tsx      → Context providers globales
 
+```
 
-🔄 Flujo de Datos Completo
-Escenario: Cliente hace un pedido
-
+```
 sequenceDiagram
     participant U as 👤 Usuario
     participant F as ⚛️ Frontend
@@ -164,18 +165,8 @@ sequenceDiagram
     O-->>F: {status: IN_PREPARATION}
     F->>U: Actualizar UI
 
+```
 
-🗄️ Capa de Persistencia
-Bases de Datos PostgreSQL (Segregación de Datos)
-┌─────────────────────┐         ┌─────────────────────┐
-│   restaurant_db     │         │     kitchen_db      │
-│  (Order Service)    │         │  (Kitchen Worker)   │
-├─────────────────────┤         ├─────────────────────┤
-│ • orders            │         │ • kitchen_orders    │
-│ • menu_items        │         │ • order_items       │
-│ • tables            │         │ • processing_logs   │
-│ • order_items       │         │                     │
-└─────────────────────┘         └─────────────────────┘
 
 ### Stack Tecnológico
 
@@ -198,58 +189,43 @@ Bases de Datos PostgreSQL (Segregación de Datos)
 
 ---
 
-🎯 Patrones de Diseño Aplicados
-Arquitectura Hexagonal (Ports & Adapters)
 
-application/ → Casos de uso
-domain/ → Lógica de negocio pura
-infrastructure → Implementaciones técnicas
-Event-Driven Architecture
+## 🔗 Dependencias Principales
 
-Desacoplamiento mediante RabbitMQ
-Asincronía entre Order Service y Kitchen Worker
-Repository Pattern
+### Backend (Maven)
 
-Abstracción de acceso a datos con Spring Data JPA
-DTO Pattern
+**Framework Core:**
+- `spring-boot-starter-web` → REST APIs
+- `spring-boot-starter-data-jpa` → ORM/Persistencia
+- `spring-boot-starter-validation` → Validaciones
 
-Separación entre entidades y contratos API
-Context API (React)
+**Base de Datos:**
+- `postgresql:42.7.1` → Driver JDBC
 
-Estado global sin Redux (carrito, auth)
+**Desarrollo:**
+- `lombok:1.18.30` → Reducir boilerplate (getters/setters)
+- `spring-boot-devtools` → Hot reload
 
+**Testing:**
+- `jqwik:1.7.4` → Property-Based Testing (enfoque avanzado)
+- `spring-boot-starter-test` → Tests unitarios e integración
+- JUnit 5 (incluido en Spring Boot)
 
-📊 Resumen de Capas
+### Frontend (npm)
 
-┌────────────────────────────────────────────────────────┐
-│                  🌐 PRESENTATION                       │
-│  React Components + Pages (Client & Kitchen)          │
-└────────────────────────────────────────────────────────┘
-                         ↕️
-┌────────────────────────────────────────────────────────┐
-│                   🔌 API LAYER                         │
-│  HTTP Client (fetch) + TanStack Query                  │
-└────────────────────────────────────────────────────────┘
-                         ↕️
-┌────────────────────────────────────────────────────────┐
-│                 🍽️ REST API (Spring)                   │
-│  Controllers + DTOs + OpenAPI Docs                     │
-└────────────────────────────────────────────────────────┘
-                         ↕️
-┌────────────────────────────────────────────────────────┐
-│               💼 BUSINESS LOGIC                        │
-│  Services + Domain Models + Use Cases                  │
-└────────────────────────────────────────────────────────┘
-                         ↕️
-┌────────────────────────────────────────────────────────┐
-│              🗄️ DATA ACCESS LAYER                      │
-│  Repositories (JPA) + Entities                         │
-└────────────────────────────────────────────────────────┘
-                         ↕️
-┌────────────────────────────────────────────────────────┐
-│                 💾 DATABASE                            │
-│  PostgreSQL (restaurant_db + kitchen_db)               │
-└────────────────────────────────────────────────────────┘
+**Core:**
+- React 18+
+- TypeScript
+- Vite
+
+**UI/Estilos:**
+- TailwindCSS → Framework CSS utility-first
+- PostCSS → Procesamiento CSS
+
+**Calidad:**
+- ESLint → Linting JavaScript/TypeScript
+
+---
 
 ## ⚠️ Riesgos Técnicos
 
@@ -318,93 +294,243 @@ Estado global sin Redux (carrito, auth)
    - Multi-módulo Maven lógico
    - Separación de responsabilidades
 
-### ⚠️ Áreas de Mejora
+---
 
-1. **Documentación API**
-   - OpenAPI spec requiere verificación
+## 📊 Modelo de Datos Simplificado
 
-2. **Monitoreo y logging**
-   - No se evidencia stack de observabilidad
-   - Considerar: Spring Actuator, Micrometer, ELK
+### Esquema de Base de Datos
 
-3. **CI/CD**
-   - No hay evidencia de pipelines
-   - [scripts/](scripts/) existe pero contenido desconocido
+El sistema utiliza **dos bases de datos PostgreSQL separadas** para garantizar el desacoplamiento entre servicios:
 
-4. **Seguridad**
-   - No se menciona Spring Security
-   - Autenticación/Autorización no documentada
+#### restaurant_db (Order Service)
+
+```sql
+-- Tabla de Productos
+CREATE TABLE product (
+    id BIGSERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+    is_active BOOLEAN DEFAULT true
+);
+
+-- Tabla de Pedidos
+CREATE TABLE "order" (
+    id UUID PRIMARY KEY,
+    table_id INTEGER NOT NULL CHECK (table_id BETWEEN 1 AND 12),
+    status VARCHAR(20) NOT NULL,  -- PENDING, IN_PREPARATION, READY
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Tabla de Items del Pedido
+CREATE TABLE order_item (
+    id BIGSERIAL PRIMARY KEY,
+    order_id UUID NOT NULL REFERENCES "order"(id),
+    product_id BIGINT NOT NULL REFERENCES product(id),
+    quantity INTEGER NOT NULL CHECK (quantity > 0),
+    note TEXT
+);
+```
+
+#### kitchen_db (Kitchen Worker)
+
+```sql
+-- Proyección de Pedidos en Cocina
+CREATE TABLE kitchen_orders (
+    id UUID PRIMARY KEY,
+    table_id INTEGER NOT NULL,
+    status VARCHAR(20) NOT NULL,
+    created_at TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Items de Pedidos en Cocina
+CREATE TABLE kitchen_order_items (
+    id BIGSERIAL PRIMARY KEY,
+    order_id UUID NOT NULL REFERENCES kitchen_orders(id),
+    product_id BIGINT NOT NULL,
+    quantity INTEGER NOT NULL
+);
+```
+
+### Diagrama de Relaciones
+
+```mermaid
+erDiagram
+    PRODUCT ||--o{ ORDER_ITEM : "referenciado por"
+    ORDER ||--|{ ORDER_ITEM : "contiene"
+    
+    PRODUCT {
+        bigint id PK
+        varchar name
+        text description
+        boolean is_active
+    }
+    
+    ORDER {
+        uuid id PK
+        integer table_id
+        varchar status
+        timestamp created_at
+        timestamp updated_at
+    }
+    
+    ORDER_ITEM {
+        bigint id PK
+        uuid order_id FK
+        bigint product_id FK
+        integer quantity
+        text note
+    }
+```
+
+### Estados de Pedido
+
+| Estado | Descripción | Transición Permitida |
+|--------|-------------|---------------------|
+| `PENDING` | Pedido creado, esperando | → `IN_PREPARATION` |
+| `IN_PREPARATION` | En cocina | → `READY` |
+| `READY` | Listo para servir | Estado final |
+
+### Reglas de Negocio Críticas
+
+1. **Validación de Mesa**: `tableId` debe estar entre 1 y 12
+2. **Productos Activos**: Solo productos con `is_active = true` pueden usarse
+3. **Items Mínimos**: Un pedido debe contener al menos 1 item
+4. **Cantidad Positiva**: `quantity` debe ser mayor que 0
+5. **Idempotencia**: Kitchen Worker debe manejar eventos duplicados
 
 ---
 
-## 🚀 Oportunidades de Mejora
+## 🔧 Guía Operativa
 
-### Prioridad Alta
+### Inicio Rápido (Modo Producción)
 
-1. **Documentar API con OpenAPI 3.0**
-   ```xml
-   <dependency>
-       <groupId>org.springdoc</groupId>
-       <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
-   </dependency>
-   ```
-   - Generar Swagger UI automático
-   - Sincronizar con carpeta [openspec/](openspec/)
+#### 1. Prerrequisitos
 
-2. **Implementar Observabilidad**
-   ```xml
-   <dependency>
-       <groupId>org.springframework.boot</groupId>
-       <artifactId>spring-boot-starter-actuator</artifactId>
-   </dependency>
-   ```
-   - Health checks
-   - Métricas de negocio
-   - Logging estructurado (Logback con JSON)
+```bash
+# Verificar instalaciones
+docker --version  # >= 20.10
+docker compose version  # >= 2.0
+node --version  # >= 18 (solo si desarrollo local)
+java --version  # >= 17 (solo si desarrollo local)
+```
 
-3. **Agregar Spring Security**
-   - JWT para autenticación stateless
-   - CORS configuration para frontend
+#### 2. Configuración de Entorno
 
-### Prioridad Media
+```bash
+# Copiar plantilla de variables
+cp .env.example .env
 
-4. **Migrar a arquitectura de eventos (opcional)**
-   - Si `kitchen-worker` necesita escalabilidad
-   - Considerar: Spring Cloud Stream + RabbitMQ/Kafka
+# Variables críticas (revisar antes de ejecutar)
+# VITE_USE_MOCK=false           # Modo API real
+# VITE_API_BASE_URL=http://localhost:8080
+# KITCHEN_TOKEN=your-secure-token-here
+```
 
-5. **Tests E2E automatizados**
-   - Backend: RestAssured + Testcontainers
-   - Frontend: Playwright/Cypress
+#### 3. Levantar Stack Completo
 
-6. **Pipeline CI/CD**
-   ```yaml
-   # .github/workflows/ci.yml
-   - Build Maven
-   - Run tests + coverage
-   - Build Docker images
-   - Deploy to staging
-   ```
+```bash
+# Levantar todos los servicios
+docker compose -f infrastructure/docker/docker-compose.yml up -d --build
 
-7. **Frontend State Management**
-   - Si la app crece: Redux Toolkit o Zustand
-   - Gestión centralizada de estado
+# Verificar estado de servicios
+docker compose -f infrastructure/docker/docker-compose.yml ps
 
-### Prioridad Baja
+# Verificar logs
+docker compose -f infrastructure/docker/docker-compose.yml logs -f
+```
 
-8. **Internacionalización (i18n)**
-   - Frontend: react-i18next
-   - Backend: ResourceBundle
+#### 4. Validación Post-Despliegue
 
-9. **Rate Limiting**
-   - Spring Cloud Gateway o Bucket4j
+```bash
+# Ejecutar smoke test completo
+bash scripts/smoke-complete.sh
 
-10. **Caché distribuido**
-    - Redis para sesiones o caché de consultas frecuentes
+# Validaciones manuales
+curl http://localhost:5173  # Frontend
+curl http://localhost:8080/menu  # API
+curl http://localhost:8080/swagger-ui.html  # Swagger
+curl -u guest:guest http://localhost:15672/api/overview  # RabbitMQ
+```
+
+### URLs de Acceso
+
+| Servicio | URL | Credenciales |
+|----------|-----|--------------|
+| Frontend Cliente | http://localhost:5173 | N/A |
+| Frontend Cocina | http://localhost:5173/kitchen/login | PIN: 1234 |
+| API REST | http://localhost:8080 | N/A |
+| Swagger UI | http://localhost:8080/swagger-ui.html | N/A |
+| RabbitMQ Management | http://localhost:15672 | guest/guest |
+
+### Comandos de Mantenimiento
+
+```bash
+# Ver logs en tiempo real
+docker compose -f infrastructure/docker/docker-compose.yml logs -f [service-name]
+
+# Reiniciar servicio específico
+docker compose -f infrastructure/docker/docker-compose.yml restart [service-name]
+
+# Detener todo
+docker compose -f infrastructure/docker/docker-compose.yml down
+
+# Limpiar volúmenes y reiniciar desde cero
+docker compose -f infrastructure/docker/docker-compose.yml down -v
+docker compose -f infrastructure/docker/docker-compose.yml up -d --build
+```
+
+## 🧪 Testing
+
+### Estrategia de Pruebas
+
+El proyecto utiliza un enfoque **dual de testing**:
+
+1. **Property-Based Testing** (jqwik): Valida propiedades universales del sistema
+2. **Unit Testing** (JUnit 5): Valida casos específicos y edge cases
+
+### Cobertura de Pruebas por Módulo
+
+#### Order Service
+
+**Pruebas Unitarias:**
+- ✅ `MenuServiceTest`: Lógica de menú y productos activos
+- ✅ `OrderServiceTest`: Creación, validación y procesamiento de pedidos
+- ✅ `OrderEventPublisherTest`: Publicación de eventos a RabbitMQ
+- ✅ `GlobalExceptionHandlerTest`: Manejo de errores HTTP
+
+
+#### Kitchen Worker
+
+**Pruebas Unitarias:**
+- ✅ `OrderProcessingServiceTest`: Procesamiento de eventos
+- ✅ `OrderEventListenerTest`: Consumo de eventos AMQP
+- ✅ `IdempotencyTest`: Manejo de eventos duplicados
+
+**Propiedades Validadas:**
+- Eventos con `eventVersion != 1` → DLQ directo
+- Procesamiento idempotente (mismo evento múltiples veces)
+- Estado siempre avanza de PENDING → IN_PREPARATION
+
+### Ejecución de Pruebas
+
+#### Pruebas de Integración
+
+```bash
+# Script automatizado de pruebas completas
+bash scripts/test-all.sh
+```
+
+**Fases del Script:**
+1. ✅ Pruebas Unitarias (Order Service + Kitchen Worker)
+2. ✅ Infraestructura (Docker Compose + Smoke Tests)
+3. ✅ Pruebas de Integración (Flujo completo E2E)
+
 
 ---
 
-
-## 👥Referencias
+## 👥 Referencias
 
 **Documentación Técnica:**
 - [README.md](README.md) - Guía de inicio
