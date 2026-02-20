@@ -44,3 +44,16 @@ export type CreateOrderResponse = {
   id: string
   status: OrderStatus
 }
+
+export type ProductBreakdown = {
+  productId: number
+  productName: string
+  quantitySold: number
+  totalAccumulated: number
+}
+
+export type ReportResponse = {
+  totalReadyOrders: number
+  totalRevenue: number
+  productBreakdown: ProductBreakdown[]
+}

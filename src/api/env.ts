@@ -13,6 +13,7 @@ function flag(name: string, fallback = false): boolean {
 
 export const ENV = {
   API_BASE_URL: required('VITE_API_BASE_URL', 'http://localhost:8080'),
+  REPORT_API_BASE_URL: required('VITE_REPORT_API_BASE_URL', 'http://localhost:8082'),
   USE_MOCK: flag('VITE_USE_MOCK', false),
   ALLOW_MOCK_FALLBACK: flag('VITE_ALLOW_MOCK_FALLBACK', false),
   KITCHEN_TOKEN_HEADER: required('VITE_KITCHEN_TOKEN_HEADER', 'X-Kitchen-Token'),
