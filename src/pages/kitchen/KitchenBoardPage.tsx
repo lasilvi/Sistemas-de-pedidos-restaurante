@@ -1,7 +1,7 @@
 ﻿import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { ChefHat, Clock, LogOut, Trash2 } from 'lucide-react'
+import { ChefHat, Clock, LogOut, Trash2, FileText } from 'lucide-react'
 import { motion } from 'motion/react'
 import { getMenu } from '@/api/menu'
 import { HttpError } from '@/api/http'
@@ -321,6 +321,12 @@ export function KitchenBoardPage() {
               >
                 {clearingAll ? 'Limpiando...' : 'Limpiar todo'}
               </Button>
+              <Link to="/reports/orders">
+                <Button variant="outline" size="sm">
+                  <FileText className="h-4 w-4 mr-1" />
+                  Reporte
+                </Button>
+              </Link>
               <Link to="/client/table">
                 <Button variant="outline" size="sm">Cliente</Button>
               </Link>
