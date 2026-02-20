@@ -30,9 +30,11 @@ rabbitmq:
     name: test.order.exchange
   queue:
     name: test.order.placed.report.queue
+    order-ready:
+      name: test.order.ready.report.queue
   routing-key:
     order-placed: order.placed
     order-ready: order.ready
   dlq:
-    name: test.order.placed.report.dlq
+    name: test.order.report.dlq
     exchange: test.order.report.dlx
