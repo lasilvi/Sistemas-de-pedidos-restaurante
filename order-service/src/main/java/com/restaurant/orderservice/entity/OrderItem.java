@@ -1,9 +1,7 @@
 package com.restaurant.orderservice.entity;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 /**
  * Entity representing an item within an order.
@@ -15,9 +13,12 @@ import lombok.NoArgsConstructor;
  */
 @Entity
 @Table(name = "order_items")
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
+@ToString(exclude = "order")
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 public class OrderItem {
     
     /**
@@ -26,6 +27,7 @@ public class OrderItem {
      */
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @EqualsAndHashCode.Include
     private Long id;
     
     /**

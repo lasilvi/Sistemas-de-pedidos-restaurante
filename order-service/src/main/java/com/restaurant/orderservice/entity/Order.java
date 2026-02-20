@@ -2,9 +2,7 @@ package com.restaurant.orderservice.entity;
 
 import com.restaurant.orderservice.enums.OrderStatus;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -26,9 +24,12 @@ import java.util.UUID;
  */
 @Entity
 @Table(name = "orders")
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
+@ToString(exclude = "items")
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 public class Order {
     
     /**
@@ -37,6 +38,7 @@ public class Order {
      */
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
+    @EqualsAndHashCode.Include
     private UUID id;
     
     /**
