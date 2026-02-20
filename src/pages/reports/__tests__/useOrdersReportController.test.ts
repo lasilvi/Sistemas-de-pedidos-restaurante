@@ -15,18 +15,35 @@ vi.mock("@/api/orders", () => ({
 
 const MOCK_ORDERS: Order[] = [
   {
-    id: "order-001",
+    id: "550e8400-e29b-41d4-a716-446655440000",
     tableId: 3,
     status: "PENDING",
-    items: [{ productId: 1, quantity: 2, name: "Empanadas" }],
+    items: [
+      {
+        id: 1,
+        productId: 1,
+        productName: "Empanadas criollas",
+        quantity: 2,
+        note: "Sin cebolla",
+      },
+    ],
     createdAt: "2026-02-19T10:00:00Z",
+    updatedAt: "2026-02-19T10:00:00Z",
   },
   {
-    id: "order-002",
+    id: "550e8400-e29b-41d4-a716-446655440001",
     tableId: 7,
     status: "IN_PREPARATION",
-    items: [{ productId: 5, quantity: 1, name: "Bife" }],
+    items: [
+      {
+        id: 2,
+        productId: 5,
+        productName: "Bife de chorizo",
+        quantity: 1,
+      },
+    ],
     createdAt: "2026-02-19T11:00:00Z",
+    updatedAt: "2026-02-19T11:00:00Z",
   },
 ];
 

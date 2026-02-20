@@ -14,6 +14,7 @@ export type OrderStatus =
   | 'READY'
 
 export type OrderItem = {
+  id?: number
   productId: number
   quantity: number
   note?: string
