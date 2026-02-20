@@ -11,6 +11,18 @@ vi.mock("@/pages/reports/useOrdersReportController", () => ({
   useOrdersReportController: vi.fn(),
 }));
 
+// Mock de react-router-dom
+vi.mock("react-router-dom", () => ({
+  Link: ({ children, to }: { children: React.ReactNode; to: string }) => (
+    <a href={to}>{children}</a>
+  ),
+}));
+
+// Mock de ThemeToggle
+vi.mock("@/components/ThemeToggle", () => ({
+  ThemeToggle: () => <div>Theme Toggle</div>,
+}));
+
 // ════════════════════════════════════════════════════════════════════════════
 // Fixtures
 // ════════════════════════════════════════════════════════════════════════════
@@ -83,6 +95,25 @@ describe("OrdersReportPage", () => {
 
     const reloadButton = screen.getByRole("button", { name: /reintentar/i });
     await user.click(reloadButton);
+
+    expect(mockReload).toHaveBeenCalledTimes(1);
+  });
+
+  it("renderiza botón de actualizar en página con datos", async () => {
+    const user = userEvent.setup();
+    const mockReload = vi.fn();
+    const mockController: OrdersReportController = {
+      initialLoading: false,
+      orders: MOCK_ORDERS,
+      error: "",
+      reload: mockReload,
+    };
+    vi.mocked(controllerModule.useOrdersReportController).mockReturnValue(mockController);
+
+    render(<OrdersReportPage />);
+
+    const updateButton = screen.getByRole("button", { name: /actualizar/i });
+    await user.click(updateButton);
 
     expect(mockReload).toHaveBeenCalledTimes(1);
   });
