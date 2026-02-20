@@ -11,6 +11,7 @@ import com.restaurant.reportservice.entity.OrderReportEntity;
 import com.restaurant.reportservice.enums.OrderStatus;
 import com.restaurant.reportservice.repository.OrderReportRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -36,6 +37,7 @@ public class ReportService {
         this.dateRangeFilter = dateRangeFilter;
     }
 
+    @Transactional(readOnly = true)
     public ReportResponseDTO generateReport(LocalDate startDate, LocalDate endDate) {
         DateRange dateRange = dateRangeFilter.validateAndCreate(startDate, endDate);
 

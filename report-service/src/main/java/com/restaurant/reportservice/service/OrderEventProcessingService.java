@@ -6,11 +6,11 @@ import com.restaurant.reportservice.entity.OrderItemReportEntity;
 import com.restaurant.reportservice.entity.OrderReportEntity;
 import com.restaurant.reportservice.enums.OrderStatus;
 import com.restaurant.reportservice.repository.OrderReportRepository;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.Optional;
 
@@ -19,11 +19,16 @@ import java.util.Optional;
  * into the report projection database. Implements idempotent upsert behavior.
  */
 @Service
-@RequiredArgsConstructor
 @Slf4j
 public class OrderEventProcessingService {
 
     private final OrderReportRepository orderReportRepository;
+    private final Clock clock;
+
+    public OrderEventProcessingService(OrderReportRepository orderReportRepository, Clock clock) {
+        this.orderReportRepository = orderReportRepository;
+        this.clock = clock;
+    }
 
     @Transactional
     public void processOrderPlaced(OrderPlacedCommand command) {
@@ -38,7 +43,7 @@ public class OrderEventProcessingService {
                 .tableId(command.getTableId())
                 .status(OrderStatus.PENDING)
                 .createdAt(command.getCreatedAt())
-                .receivedAt(LocalDateTime.now())
+                .receivedAt(LocalDateTime.now(clock))
                 .build();
 
         if (command.getItems() != null) {
@@ -71,7 +76,7 @@ public class OrderEventProcessingService {
                     .tableId(0)
                     .status(OrderStatus.READY)
                     .createdAt(command.getUpdatedAt())
-                    .receivedAt(LocalDateTime.now())
+                    .receivedAt(LocalDateTime.now(clock))
                     .build();
             orderReportRepository.save(order);
             log.info("Created order {} directly as READY (upsert)", command.getOrderId());
