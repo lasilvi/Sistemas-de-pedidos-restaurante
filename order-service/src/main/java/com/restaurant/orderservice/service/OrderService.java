@@ -212,9 +212,9 @@ public class OrderService {
         
         // ⚠️ SECURITY: Validate status transition (Backend Enforcement)
         // Copilot Instructions Section 4: "Backend debe rechazar cambios de estado que no respeten el flujo definido"
-        OrderStatus.validateTransition(order.getStatus(), newStatus);
+        // Validation is now handled by Order.updateStatus()
+        order.updateStatus(newStatus);
         
-        order.setStatus(newStatus);
         // updatedAt is automatically updated by @PreUpdate
         Order updatedOrder = orderRepository.save(order);
         
