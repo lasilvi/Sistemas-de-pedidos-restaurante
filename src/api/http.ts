@@ -14,9 +14,10 @@ export class HttpError extends Error {
 
 export async function http<T>(
   path: string,
-  init?: RequestInit & { json?: unknown; kitchenToken?: string },
+  init?: RequestInit & { json?: unknown; kitchenToken?: string; baseUrl?: string },
 ): Promise<T> {
-  const url = `${ENV.API_BASE_URL}${path}`
+  const baseUrl = init?.baseUrl ?? ENV.API_BASE_URL
+  const url = `${baseUrl}${path}`
   const headers = new Headers(init?.headers ?? {})
 
   headers.set('Accept', 'application/json')
