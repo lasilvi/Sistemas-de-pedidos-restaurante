@@ -40,6 +40,7 @@ public class ReportEventListener {
         }
     }
 
+    @RabbitListener(queues = "${rabbitmq.queue.order-ready.name}")
     public void handleOrderReadyEvent(OrderReadyEvent event) {
         try {
             OrderReadyCommand command = mapToReadyCommand(event);
