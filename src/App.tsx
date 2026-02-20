@@ -7,6 +7,7 @@ import { ConfirmationPage } from '@/pages/client/ConfirmationPage'
 import { OrderStatusPage } from '@/pages/client/OrderStatusPage'
 import { KitchenLoginPage } from '@/pages/kitchen/KitchenLoginPage'
 import { KitchenBoardPage } from '@/pages/kitchen/KitchenBoardPage'
+import { OrdersReportPage } from '@/pages/reports/OrdersReportPage'
 import { WelcomePage } from '@/pages/WelcomePage'
 import { AppProvider } from '@/app/context'
 
@@ -26,6 +27,8 @@ export default function App() {
 
           <Route path="/kitchen" element={<KitchenLoginPage />} />
           <Route path="/kitchen/board" element={<KitchenBoardPage />} />
+
+          <Route path="/reports/orders" element={<OrdersReportPage />} />
 
           <Route path="*" element={<Navigate to="/client/table" replace />} />
         </Route>
