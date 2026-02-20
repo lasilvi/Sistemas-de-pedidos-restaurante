@@ -190,6 +190,15 @@ class ReportServiceTest {
         );
     }
 
+    @Test
+    @DisplayName("Should have readOnly transaction on generateReport")
+    void shouldHaveReadOnlyTransactionOnGenerateReport() throws NoSuchMethodException {
+        java.lang.reflect.Method method = ReportService.class.getMethod("generateReport", LocalDate.class, LocalDate.class);
+        org.springframework.transaction.annotation.Transactional transactional = method.getAnnotation(org.springframework.transaction.annotation.Transactional.class);
+        assertNotNull(transactional, "generateReport should be annotated with @Transactional");
+        assertTrue(transactional.readOnly(), "generateReport transaction should be readOnly");
+    }
+
     // Helper methods
     private OrderReportEntity createOrderEntity(OrderStatus status) {
         OrderReportEntity order = OrderReportEntity.builder()
