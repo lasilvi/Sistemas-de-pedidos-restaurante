@@ -16,7 +16,9 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.amqp.AmqpRejectAndDontRequeueException;
+import org.springframework.amqp.rabbit.annotation.RabbitListener;
 
+import java.lang.reflect.Method;
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.UUID;
@@ -40,6 +42,15 @@ class ReportEventListenerTest {
     @BeforeEach
     void setUp() {
         reportEventListener = new ReportEventListener(orderEventProcessingService);
+    }
+
+    @Test
+    @DisplayName("handleOrderReadyEvent should have @RabbitListener annotation")
+    void handleOrderReadyEventShouldHaveRabbitListenerAnnotation() throws NoSuchMethodException {
+        Method method = ReportEventListener.class.getMethod("handleOrderReadyEvent", OrderReadyEvent.class);
+        RabbitListener annotation = method.getAnnotation(RabbitListener.class);
+        assertNotNull(annotation, "handleOrderReadyEvent must have @RabbitListener annotation");
+        assertTrue(annotation.queues().length > 0, "queues must not be empty");
     }
 
     @Test

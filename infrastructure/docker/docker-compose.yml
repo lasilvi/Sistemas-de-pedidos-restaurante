@@ -83,6 +83,7 @@
     ports:
       - "8080:8080"
     environment:
+      SERVER_PORT: ${SERVER_PORT:-8080}
       DB_URL: ${DB_URL:-jdbc:postgresql://postgres:5432/restaurant_db}
       DB_USER: ${DB_USER:-restaurant_user}
       DB_PASS: ${DB_PASS:-restaurant_pass}
@@ -90,8 +91,12 @@
       RABBITMQ_PORT: ${RABBITMQ_PORT:-5672}
       RABBITMQ_USER: ${RABBITMQ_USER:-guest}
       RABBITMQ_PASS: ${RABBITMQ_PASS:-guest}
+      RABBITMQ_EXCHANGE_NAME: ${RABBITMQ_EXCHANGE_NAME:-order.exchange}
+      RABBITMQ_ROUTING_KEY_ORDER_PLACED: ${RABBITMQ_ROUTING_KEY_ORDER_PLACED:-order.placed}
       KITCHEN_TOKEN_HEADER: ${KITCHEN_TOKEN_HEADER:-X-Kitchen-Token}
       KITCHEN_AUTH_TOKEN: ${KITCHEN_AUTH_TOKEN:-cocina123}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:5173,http://127.0.0.1:5173}
+      CORS_ALLOWED_ORIGIN_PATTERNS: ${CORS_ALLOWED_ORIGIN_PATTERNS:-}
     depends_on:
       postgres:
         condition: service_healthy
@@ -107,6 +112,7 @@
     container_name: restaurant-kitchen-worker
     restart: on-failure
     environment:
+      KITCHEN_WORKER_PORT: ${KITCHEN_WORKER_PORT:-8081}
       KITCHEN_DB_URL: ${KITCHEN_DB_URL:-jdbc:postgresql://kitchen-postgres:5432/kitchen_db}
       KITCHEN_DB_USER: ${KITCHEN_DB_USER:-kitchen_user}
       KITCHEN_DB_PASS: ${KITCHEN_DB_PASS:-kitchen_pass}
@@ -114,6 +120,12 @@
       RABBITMQ_PORT: ${RABBITMQ_PORT:-5672}
       RABBITMQ_USER: ${RABBITMQ_USER:-guest}
       RABBITMQ_PASS: ${RABBITMQ_PASS:-guest}
+      RABBITMQ_EXCHANGE_NAME: ${RABBITMQ_EXCHANGE_NAME:-order.exchange}
+      RABBITMQ_KITCHEN_QUEUE_NAME: ${RABBITMQ_KITCHEN_QUEUE_NAME:-order.placed.queue}
+      RABBITMQ_ROUTING_KEY_ORDER_PLACED: ${RABBITMQ_ROUTING_KEY_ORDER_PLACED:-order.placed}
+      RABBITMQ_KITCHEN_DLQ_NAME: ${RABBITMQ_KITCHEN_DLQ_NAME:-order.placed.dlq}
+      RABBITMQ_KITCHEN_DLX_NAME: ${RABBITMQ_KITCHEN_DLX_NAME:-order.dlx}
+      RABBITMQ_DLQ_ROUTING_KEY: ${RABBITMQ_DLQ_ROUTING_KEY:-order.placed.failed}
     depends_on:
       kitchen-postgres:
         condition: service_healthy
@@ -132,13 +144,21 @@
     ports:
       - "8082:8082"
     environment:
-      DB_URL: ${REPORT_DB_URL:-jdbc:postgresql://report-postgres:5432/report_db}
-      DB_USER: ${REPORT_DB_USER:-report_user}
-      DB_PASS: ${REPORT_DB_PASS:-report_pass}
+      REPORT_SERVICE_PORT: ${REPORT_SERVICE_PORT:-8082}
+      REPORT_DB_URL: ${REPORT_DB_URL:-jdbc:postgresql://report-postgres:5432/report_db}
+      REPORT_DB_USER: ${REPORT_DB_USER:-report_user}
+      REPORT_DB_PASS: ${REPORT_DB_PASS:-report_pass}
       RABBITMQ_HOST: ${RABBITMQ_HOST:-rabbitmq}
       RABBITMQ_PORT: ${RABBITMQ_PORT:-5672}
       RABBITMQ_USER: ${RABBITMQ_USER:-guest}
       RABBITMQ_PASS: ${RABBITMQ_PASS:-guest}
+      RABBITMQ_EXCHANGE_NAME: ${RABBITMQ_EXCHANGE_NAME:-order.exchange}
+      RABBITMQ_REPORT_QUEUE_NAME: ${RABBITMQ_REPORT_QUEUE_NAME:-order.placed.report.queue}
+      RABBITMQ_ROUTING_KEY_ORDER_PLACED: ${RABBITMQ_ROUTING_KEY_ORDER_PLACED:-order.placed}
+      RABBITMQ_REPORT_ORDER_READY_QUEUE_NAME: ${RABBITMQ_REPORT_ORDER_READY_QUEUE_NAME:-order.ready.report.queue}
+      RABBITMQ_ROUTING_KEY_ORDER_READY: ${RABBITMQ_ROUTING_KEY_ORDER_READY:-order.ready}
+      RABBITMQ_REPORT_DLQ_NAME: ${RABBITMQ_REPORT_DLQ_NAME:-order.placed.report.dlq}
+      RABBITMQ_REPORT_DLX_NAME: ${RABBITMQ_REPORT_DLX_NAME:-order.report.dlx}
     depends_on:
       report-postgres:
         condition: service_healthy

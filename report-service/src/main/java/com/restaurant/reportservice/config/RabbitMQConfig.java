@@ -28,6 +28,12 @@ public class RabbitMQConfig {
     @Value("${rabbitmq.routing-key.order-placed}")
     private String routingKeyOrderPlaced;
 
+    @Value("${rabbitmq.queue.order-ready.name}")
+    private String orderReadyQueueName;
+
+    @Value("${rabbitmq.routing-key.order-ready}")
+    private String routingKeyOrderReady;
+
     @Value("${rabbitmq.dlq.name}")
     private String dlqName;
 
@@ -43,7 +49,15 @@ public class RabbitMQConfig {
     public Queue reportQueue() {
         return QueueBuilder.durable(queueName)
                 .withArgument("x-dead-letter-exchange", dlxName)
-                .withArgument("x-dead-letter-routing-key", routingKeyOrderPlaced)
+                .withArgument("x-dead-letter-routing-key", dlqName)
+                .build();
+    }
+
+    @Bean
+    public Queue orderReadyReportQueue() {
+        return QueueBuilder.durable(orderReadyQueueName)
+                .withArgument("x-dead-letter-exchange", dlxName)
+                .withArgument("x-dead-letter-routing-key", dlqName)
                 .build();
     }
 
@@ -66,11 +80,19 @@ public class RabbitMQConfig {
     }
 
     @Bean
+    public Binding orderReadyReportQueueBinding() {
+        return BindingBuilder
+                .bind(orderReadyReportQueue())
+                .to(orderExchange())
+                .with(routingKeyOrderReady);
+    }
+
+    @Bean
     public Binding reportDlqBinding() {
         return BindingBuilder
                 .bind(reportDlq())
                 .to(reportDlx())
-                .with(routingKeyOrderPlaced);
+                .with(dlqName);
     }
 
     @Bean
