@@ -1,18 +1,27 @@
+version: '3.8'
+
 services:
   frontend:
     build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: orders-frontend
+      context: ../..
+      dockerfile: Dockerfile.production
+    image: restaurant-frontend:production
+    container_name: restaurant-frontend-standalone
+    restart: unless-stopped
+    environment:
+      # Production frontend with nginx
+      # Backend service should be accessible externally
+      VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:8080}
+      VITE_KITCHEN_TOKEN_HEADER: ${VITE_KITCHEN_TOKEN_HEADER:-X-Kitchen-Token}
+      VITE_KITCHEN_PIN: ${VITE_KITCHEN_PIN:-1234}
+      VITE_KITCHEN_FIXED_TOKEN: ${VITE_KITCHEN_FIXED_TOKEN:-}
+      VITE_USE_MOCK: ${VITE_USE_MOCK:-false}
+      VITE_ALLOW_MOCK_FALLBACK: ${VITE_ALLOW_MOCK_FALLBACK:-false}
     ports:
       - "8080:8080"
-    environment:
-      - VITE_API_BASE_URL=${VITE_API_BASE_URL:-http://host.docker.internal:8081}
-      - VITE_KITCHEN_TOKEN_HEADER=${VITE_KITCHEN_TOKEN_HEADER:-X-Kitchen-Token}
-      - VITE_KITCHEN_PIN=${VITE_KITCHEN_PIN:-1234}
-      - VITE_KITCHEN_FIXED_TOKEN=${VITE_KITCHEN_FIXED_TOKEN:-}
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:8080/"]
-      interval: 10s
-      timeout: 3s
-      retries: 10
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:8080/health || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s

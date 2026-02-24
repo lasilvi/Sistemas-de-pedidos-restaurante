@@ -173,7 +173,7 @@
       dockerfile: Dockerfile.frontend
     container_name: restaurant-frontend
     ports:
-      - "5173:5173"
+      - "5173:8080"
     environment:
       VITE_USE_MOCK: ${VITE_USE_MOCK:-false}
       VITE_ALLOW_MOCK_FALLBACK: ${VITE_ALLOW_MOCK_FALLBACK:-false}

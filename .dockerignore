@@ -1,10 +1,89 @@
+# Version Control
 .git
 .gitignore
+.gitattributes
+
+# Dependencies
 node_modules
+**/node_modules
+
+# Build outputs
 dist
+build
 coverage
 **/target
+**/*.jar
+**/*.war
+
+# IDE and Editor files
 **/.idea
 **/.vscode
+**/*.swp
+**/*.swo
+**/*~
+.project
+.classpath
+.settings/
+
+# OS files
 **/.DS_Store
+**/Thumbs.db
+**/*.log
+
+# TypeScript
+**/*.tsbuildinfo
 **/tsconfig*.tsbuildinfo
+
+# Documentation
+docs/
+*.md
+!README.md
+
+# Docker files (avoid nested Docker builds)
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+.travis.yml
+Jenkinsfile
+
+# Test files
+**/*test*
+**/*spec*
+**/__tests__
+**/test/
+**/*.test.ts
+**/*.test.tsx
+**/*.spec.ts
+**/*.spec.tsx
+
+# Environment files (should use build args)
+.env
+.env.*
+**/.env
+**/.env.*
+
+# Scripts (not needed in image)
+scripts/
+**/*.sh
+
+# Terraform, Kubernetes, etc
+terraform/
+k8s/
+*.tf
+*.yaml
+*.yml
+
+# NPM/Yarn
+.npmrc
+.yarnrc
+yarn.lock
+package-lock.json
+
+# Maven  
+.mvn/
+mvnw
+mvnw.cmd
