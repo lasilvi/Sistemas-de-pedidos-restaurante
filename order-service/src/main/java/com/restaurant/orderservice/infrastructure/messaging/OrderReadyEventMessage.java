@@ -7,20 +7,18 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.io.Serializable;
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.UUID;
 
 /**
- * Transport contract for order placed integration events (v1).
+ * Transport contract for order ready integration events (v1).
  */
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class OrderPlacedEventMessage implements Serializable {
+public class OrderReadyEventMessage implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
@@ -30,12 +28,6 @@ public class OrderPlacedEventMessage implements Serializable {
     private LocalDateTime occurredAt;
     private Payload payload;
 
-    // Legacy flat fields kept for backward compatibility.
-    private UUID orderId;
-    private Integer tableId;
-    private List<OrderItemPayload> items;
-    private LocalDateTime createdAt;
-
     @Data
     @Builder
     @NoArgsConstructor
@@ -44,21 +36,7 @@ public class OrderPlacedEventMessage implements Serializable {
     public static class Payload implements Serializable {
         private static final long serialVersionUID = 1L;
         private UUID orderId;
-        private Integer tableId;
-        private List<OrderItemPayload> items;
-        private LocalDateTime createdAt;
-    }
-
-    @Data
-    @Builder
-    @NoArgsConstructor
-    @AllArgsConstructor
-    @JsonIgnoreProperties(ignoreUnknown = true)
-    public static class OrderItemPayload implements Serializable {
-        private static final long serialVersionUID = 1L;
-        private Long productId;
-        private Integer quantity;
-        private BigDecimal price;
-        private String productName;
+        private String status;
+        private LocalDateTime updatedAt;
     }
 }

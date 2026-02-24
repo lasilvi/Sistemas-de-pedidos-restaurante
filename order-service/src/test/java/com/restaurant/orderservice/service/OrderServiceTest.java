@@ -1,6 +1,7 @@
 package com.restaurant.orderservice.service;
 
 import com.restaurant.orderservice.application.port.out.OrderPlacedEventPublisherPort;
+import com.restaurant.orderservice.application.port.out.OrderReadyEventPublisherPort;
 import com.restaurant.orderservice.dto.CreateOrderRequest;
 import com.restaurant.orderservice.dto.OrderItemRequest;
 import com.restaurant.orderservice.dto.OrderResponse;
@@ -46,7 +47,13 @@ class OrderServiceTest {
     private OrderMapper orderMapper;
 
     @Mock
+    private OrderEventBuilder orderEventBuilder;
+
+    @Mock
     private OrderPlacedEventPublisherPort orderPlacedEventPublisherPort;
+
+    @Mock
+    private OrderReadyEventPublisherPort orderReadyEventPublisherPort;
 
     @Mock
     private OrderCommandExecutor orderCommandExecutor;
@@ -143,7 +150,7 @@ class OrderServiceTest {
                 .updatedAt(order.getUpdatedAt())
                 .build();
 
-        when(orderRepository.findById(orderId)).thenReturn(Optional.of(order));
+        when(orderRepository.findByIdActive(orderId)).thenReturn(Optional.of(order));
         when(orderMapper.mapToOrderResponse(order)).thenReturn(expected);
 
         OrderResponse response = orderService.getOrderById(orderId);
@@ -155,7 +162,7 @@ class OrderServiceTest {
     @Test
     void getOrderById_withUnknownId_throwsOrderNotFound() {
         UUID orderId = UUID.randomUUID();
-        when(orderRepository.findById(orderId)).thenReturn(Optional.empty());
+        when(orderRepository.findByIdActive(orderId)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> orderService.getOrderById(orderId))
                 .isInstanceOf(OrderNotFoundException.class)
@@ -173,14 +180,14 @@ class OrderServiceTest {
                 OrderResponse.builder().id(order2.getId()).status(order2.getStatus()).tableId(order2.getTableId()).items(new ArrayList<>()).build()
         );
 
-        when(orderRepository.findAll()).thenReturn(orders);
+        when(orderRepository.findAllActive()).thenReturn(orders);
         when(orderMapper.mapToOrderResponseList(orders)).thenReturn(mapped);
 
         List<OrderResponse> result = orderService.getOrders(null);
 
         assertThat(result).hasSize(2);
-        verify(orderRepository).findAll();
-        verify(orderRepository, never()).findByStatusIn(any());
+        verify(orderRepository).findAllActive();
+        verify(orderRepository, never()).findByStatusInActive(any());
     }
 
     @Test
@@ -193,21 +200,21 @@ class OrderServiceTest {
                 OrderResponse.builder().id(order1.getId()).status(order1.getStatus()).tableId(order1.getTableId()).items(new ArrayList<>()).build()
         );
 
-        when(orderRepository.findByStatusIn(filter)).thenReturn(orders);
+        when(orderRepository.findByStatusInActive(filter)).thenReturn(orders);
         when(orderMapper.mapToOrderResponseList(orders)).thenReturn(mapped);
 
         List<OrderResponse> result = orderService.getOrders(filter);
 
         assertThat(result).hasSize(1);
         assertThat(result.get(0).getStatus()).isEqualTo(OrderStatus.PENDING);
-        verify(orderRepository).findByStatusIn(filter);
-        verify(orderRepository, never()).findAll();
+        verify(orderRepository).findByStatusInActive(filter);
+        verify(orderRepository, never()).findAllActive();
     }
 
     @Test
     void updateOrderStatus_withValidOrder_updatesAndMapsResponse() {
         UUID orderId = UUID.randomUUID();
-        Order current = buildOrder(orderId, OrderStatus.PENDING);
+        Order current = buildOrder(orderId, OrderStatus.IN_PREPARATION);
         Order updated = buildOrder(orderId, OrderStatus.READY);
 
         OrderResponse expected = OrderResponse.builder()
@@ -219,27 +226,56 @@ class OrderServiceTest {
                 .updatedAt(updated.getUpdatedAt())
                 .build();
 
-        when(orderRepository.findById(orderId)).thenReturn(Optional.of(current));
+        when(orderRepository.findByIdActive(orderId)).thenReturn(Optional.of(current));
         when(orderRepository.save(any(Order.class))).thenReturn(updated);
+        doNothing().when(orderCommandExecutor).execute(any());
         when(orderMapper.mapToOrderResponse(updated)).thenReturn(expected);
 
         OrderResponse response = orderService.updateOrderStatus(orderId, OrderStatus.READY);
 
         assertThat(response.getStatus()).isEqualTo(OrderStatus.READY);
         verify(orderRepository).save(any(Order.class));
+        verify(orderCommandExecutor).execute(any());
         verify(orderMapper).mapToOrderResponse(updated);
     }
 
     @Test
     void updateOrderStatus_withUnknownOrder_throwsOrderNotFound() {
         UUID orderId = UUID.randomUUID();
-        when(orderRepository.findById(orderId)).thenReturn(Optional.empty());
+        when(orderRepository.findByIdActive(orderId)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> orderService.updateOrderStatus(orderId, OrderStatus.READY))
                 .isInstanceOf(OrderNotFoundException.class)
                 .hasMessageContaining(orderId.toString());
 
         verify(orderRepository, never()).save(any(Order.class));
+    }
+
+    @Test
+    void updateOrderStatus_toNonReadyStatus_doesNotPublishEvent() {
+        UUID orderId = UUID.randomUUID();
+        Order current = buildOrder(orderId, OrderStatus.PENDING);
+        Order updated = buildOrder(orderId, OrderStatus.IN_PREPARATION);
+
+        OrderResponse expected = OrderResponse.builder()
+                .id(orderId)
+                .tableId(updated.getTableId())
+                .status(OrderStatus.IN_PREPARATION)
+                .items(new ArrayList<>())
+                .createdAt(updated.getCreatedAt())
+                .updatedAt(updated.getUpdatedAt())
+                .build();
+
+        when(orderRepository.findByIdActive(orderId)).thenReturn(Optional.of(current));
+        when(orderRepository.save(any(Order.class))).thenReturn(updated);
+        when(orderMapper.mapToOrderResponse(updated)).thenReturn(expected);
+
+        OrderResponse response = orderService.updateOrderStatus(orderId, OrderStatus.IN_PREPARATION);
+
+        assertThat(response.getStatus()).isEqualTo(OrderStatus.IN_PREPARATION);
+        verify(orderRepository).save(any(Order.class));
+        verify(orderCommandExecutor, never()).execute(any());
+        verify(orderMapper).mapToOrderResponse(updated);
     }
 
     @Test
@@ -250,7 +286,9 @@ class OrderServiceTest {
 
         orderService.deleteOrder(orderId);
 
-        verify(orderRepository).delete(order);
+        assertThat(order.isDeleted()).isTrue();
+        assertThat(order.getDeletedAt()).isNotNull();
+        verify(orderRepository).save(order);
     }
 
     @Test
@@ -262,18 +300,25 @@ class OrderServiceTest {
                 .isInstanceOf(OrderNotFoundException.class)
                 .hasMessageContaining(orderId.toString());
 
-        verify(orderRepository, never()).delete(any(Order.class));
+        verify(orderRepository, never()).save(any(Order.class));
     }
 
     @Test
     void deleteAllOrders_returnsDeletedCount() {
-        when(orderRepository.count()).thenReturn(7L);
+        Order order1 = buildOrder(UUID.randomUUID(), OrderStatus.PENDING);
+        Order order2 = buildOrder(UUID.randomUUID(), OrderStatus.IN_PREPARATION);
+        List<Order> activeOrders = List.of(order1, order2);
+        when(orderRepository.findAllActive()).thenReturn(activeOrders);
+        when(orderRepository.save(any(Order.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         long deletedCount = orderService.deleteAllOrders();
 
-        assertThat(deletedCount).isEqualTo(7L);
-        verify(orderRepository).count();
-        verify(orderRepository).deleteAll();
+        assertThat(deletedCount).isEqualTo(2L);
+        assertThat(order1.isDeleted()).isTrue();
+        assertThat(order2.isDeleted()).isTrue();
+        verify(orderRepository).findAllActive();
+        verify(orderRepository).save(order1);
+        verify(orderRepository).save(order2);
     }
 
     private static Order buildOrder(UUID id, OrderStatus status) {

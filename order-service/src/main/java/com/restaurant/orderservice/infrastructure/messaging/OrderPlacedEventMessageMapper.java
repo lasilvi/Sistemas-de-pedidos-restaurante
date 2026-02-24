@@ -21,6 +21,8 @@ public class OrderPlacedEventMessageMapper {
                 .map(item -> OrderPlacedEventMessage.OrderItemPayload.builder()
                         .productId(item.getProductId())
                         .quantity(item.getQuantity())
+                        .price(item.getPrice())
+                        .productName(item.getProductName())
                         .build())
                 .collect(Collectors.toList());
 
