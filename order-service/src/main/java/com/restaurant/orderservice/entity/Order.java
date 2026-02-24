@@ -18,6 +18,10 @@ import java.util.UUID;
  * Each order has a status that tracks its lifecycle from creation to completion.
  * Timestamps are automatically managed through JPA lifecycle callbacks.
  * 
+ * Soft Delete:
+ * Orders are never physically deleted. Instead, they are marked as deleted
+ * with a timestamp for audit purposes (Copilot Instructions Section 4).
+ * 
  * Validates Requirements: 2.3, 2.4, 2.5, 9.1
  */
 @Entity
@@ -78,6 +82,25 @@ public class Order {
     private LocalDateTime updatedAt;
     
     /**
+     * Soft delete flag. When true, the order is considered deleted.
+     * Orders are never physically removed from the database for audit purposes.
+     * 
+     * Cumple con Copilot Instructions:
+     * - Sección 4: Security - Destructive Operations
+     * - "Implementar soft delete (campo is_deleted, deleted_at, etc.)"
+     */
+    @Column(name = "deleted", nullable = false)
+    private boolean deleted = false;
+    
+    /**
+     * Timestamp when the order was soft-deleted.
+     * Null if the order has not been deleted.
+     * Used for audit purposes.
+     */
+    @Column(name = "deleted_at")
+    private LocalDateTime deletedAt;
+    
+    /**
      * JPA lifecycle callback executed before the entity is persisted for the first time.
      * Sets both createdAt and updatedAt to the current timestamp.
      */
@@ -94,5 +117,31 @@ public class Order {
     @PreUpdate
     protected void onUpdate() {
         updatedAt = LocalDateTime.now();
+    }
+    
+    /**
+     * Updates the order status with validation.
+     * Validates that the transition from current status to new status is allowed.
+     * 
+     * Allowed transitions:
+     * - PENDING -> IN_PREPARATION
+     * - IN_PREPARATION -> READY
+     * - READY -> (no transitions allowed)
+     * 
+     * @param newStatus the new status to transition to
+     * @throws com.restaurant.orderservice.exception.InvalidStatusTransitionException if transition is invalid
+     */
+    public void updateStatus(OrderStatus newStatus) {
+        OrderStatus.validateTransition(this.status, newStatus);
+        this.status = newStatus;
+    }
+    
+    /**
+     * Marks this order as soft-deleted.
+     * Sets the deleted flag to true and records the deletion timestamp.
+     */
+    public void markAsDeleted() {
+        this.deleted = true;
+        this.deletedAt = LocalDateTime.now();
     }
 }

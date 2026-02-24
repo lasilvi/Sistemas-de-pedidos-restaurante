@@ -39,6 +39,9 @@ public class RabbitMQConfig {
     @Value("${rabbitmq.dlq.exchange}")
     private String dlxName;
 
+    @Value("${rabbitmq.dlq.routing-key}")
+    private String dlqRoutingKey;
+
     /**
      * Declares the topic exchange for order events.
      * Topic exchanges route messages to queues based on routing key patterns.
@@ -75,7 +78,7 @@ public class RabbitMQConfig {
     public Queue orderPlacedQueue() {
         return QueueBuilder.durable(queueName)
                 .withArgument("x-dead-letter-exchange", dlxName)
-                .withArgument("x-dead-letter-routing-key", "order.placed.failed")
+                .withArgument("x-dead-letter-routing-key", dlqRoutingKey)
                 .build();
     }
 
@@ -122,7 +125,7 @@ public class RabbitMQConfig {
         return BindingBuilder
                 .bind(orderPlacedDLQ())
                 .to(deadLetterExchange())
-                .with("order.placed.failed");
+                .with(dlqRoutingKey);
     }
 
     /**

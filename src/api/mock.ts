@@ -178,7 +178,15 @@ function seedOrders() {
       id: nextId(),
       tableId: 3,
       status: 'PENDING',
-      items: [{ productId: 1, quantity: 2, note: 'Sin cebolla' }],
+      items: [
+        {
+          id: 1,
+          productId: 1,
+          productName: 'Empanadas criollas',
+          quantity: 2,
+          note: 'Sin cebolla',
+        },
+      ],
       note: 'Enviar cubiertos extra',
       createdAt,
       updatedAt: createdAt,
@@ -187,7 +195,14 @@ function seedOrders() {
       id: nextId(),
       tableId: 5,
       status: 'IN_PREPARATION',
-      items: [{ productId: 3, quantity: 1 }],
+      items: [
+        {
+          id: 2,
+          productId: 3,
+          productName: 'Ceviche de pescado',
+          quantity: 1,
+        },
+      ],
       createdAt,
       updatedAt: createdAt,
     },

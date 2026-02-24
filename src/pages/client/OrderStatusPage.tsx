@@ -3,10 +3,12 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { ArrowLeft, CheckCircle, Clock, Package } from 'lucide-react'
 import { motion } from 'motion/react'
+import { HttpError } from '@/api/http'
 import { getMenu } from '@/api/menu'
 import { getOrder } from '@/api/orders'
 import { buildProductNameMap, resolveOrderItemName } from '@/domain/productLabel'
 import { STATUS_LABEL } from '@/domain/orderStatus'
+import { clearKitchenToken } from '@/store/kitchenAuth'
 import type { OrderStatus } from '@/api/contracts'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { Loading } from '@/components/Loading'
@@ -26,14 +28,29 @@ export function OrderStatusPage() {
   const { orderId: orderIdParam } = useParams()
   const navigate = useNavigate()
   const [orderIdInput, setOrderIdInput] = useState(orderIdParam ?? '')
+  const [shouldPoll, setShouldPoll] = useState(true)
 
   const orderId = useMemo(() => orderIdParam ?? '', [orderIdParam])
 
   const orderQ = useQuery({
     queryKey: ['order', orderId],
-    queryFn: () => getOrder(orderId),
+    queryFn: async () => {
+      try {
+        return await getOrder(orderId)
+      } catch (err) {
+        // Handle 401 authentication errors - clear invalid token and stop polling
+        if (err instanceof HttpError && err.status === 401) {
+          clearKitchenToken()
+          setShouldPoll(false)
+        }
+        throw err
+      }
+    },
     enabled: Boolean(orderId),
-    refetchInterval: 5000,
+    refetchInterval: shouldPoll ? 5000 : false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    retry: false,
   })
 
   const menuQ = useQuery({

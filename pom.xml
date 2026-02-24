@@ -16,6 +16,7 @@
     <modules>
         <module>order-service</module>
         <module>kitchen-worker</module>
+        <module>report-service</module>
     </modules>
 
     <properties>

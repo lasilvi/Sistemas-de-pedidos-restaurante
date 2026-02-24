@@ -24,21 +24,32 @@ public class WebConfig implements WebMvcConfigurer {
     @Override
     public void addCorsMappings(CorsRegistry registry) {
         String patterns = System.getenv("CORS_ALLOWED_ORIGIN_PATTERNS");
-        if (patterns == null || patterns.isBlank()) {
+        if (patterns != null && !patterns.isBlank()) {
+            String[] allowedPatterns = patterns.split(",");
+            for (int i = 0; i < allowedPatterns.length; i++) {
+                allowedPatterns[i] = allowedPatterns[i].trim();
+            }
+
             registry.addMapping("/**")
-                    .allowedOrigins("http://localhost:5173", "http://127.0.0.1:5173")
+                    .allowedOriginPatterns(allowedPatterns)
                     .allowedMethods("GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS")
                     .allowedHeaders("*");
             return;
         }
 
-        String[] allowedPatterns = patterns.split(",");
-        for (int i = 0; i < allowedPatterns.length; i++) {
-            allowedPatterns[i] = allowedPatterns[i].trim();
+        String origins = System.getenv("CORS_ALLOWED_ORIGINS");
+        if (origins == null || origins.isBlank()) {
+            throw new IllegalStateException(
+                "CORS_ALLOWED_ORIGINS or CORS_ALLOWED_ORIGIN_PATTERNS environment variable must be defined");
+        }
+
+        String[] allowedOrigins = origins.split(",");
+        for (int i = 0; i < allowedOrigins.length; i++) {
+            allowedOrigins[i] = allowedOrigins[i].trim();
         }
 
         registry.addMapping("/**")
-                .allowedOriginPatterns(allowedPatterns)
+                .allowedOrigins(allowedOrigins)
                 .allowedMethods("GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS")
                 .allowedHeaders("*");
     }

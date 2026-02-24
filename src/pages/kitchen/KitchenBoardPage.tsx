@@ -1,9 +1,10 @@
 ﻿import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { ChefHat, Clock, LogOut, Trash2 } from 'lucide-react'
+import { ChefHat, Clock, LogOut, Trash2, FileText } from 'lucide-react'
 import { motion } from 'motion/react'
 import { getMenu } from '@/api/menu'
+import { HttpError } from '@/api/http'
 import { clearOrders, deleteOrder, listOrders, patchOrderStatus } from '@/api/orders'
 import type { Order, OrderStatus } from '@/api/contracts'
 import { buildProductNameMap, resolveOrderItemName } from '@/domain/productLabel'
@@ -114,6 +115,17 @@ export function KitchenBoardPage() {
         setError('')
       } catch (err) {
         if (!mountedRef.current) return
+        
+        // Handle 401 authentication errors
+        if (err instanceof HttpError && err.status === 401) {
+          mountedRef.current = false // Prevent further polling
+          inFlightRef.current = false
+          if (timeoutRef.current) window.clearTimeout(timeoutRef.current)
+          clearKitchenToken()
+          navigate('/kitchen', { replace: true })
+          return
+        }
+        
         setError(err instanceof Error ? err.message : 'No pudimos cargar pedidos')
       } finally {
         inFlightRef.current = false
@@ -127,7 +139,7 @@ export function KitchenBoardPage() {
         }
       }
     },
-    [token],
+    [navigate, token],
   )
 
   useEffect(() => {
@@ -186,6 +198,13 @@ export function KitchenBoardPage() {
       })
       await loadOrders({ block: false })
     } catch (err) {
+      // Handle 401 authentication errors
+      if (err instanceof HttpError && err.status === 401) {
+        clearKitchenToken()
+        navigate('/kitchen', { replace: true })
+        return
+      }
+      
       toast({
         title: 'No se pudo actualizar',
         description: err instanceof Error ? err.message : 'Error inesperado',
@@ -210,6 +229,13 @@ export function KitchenBoardPage() {
       })
       await loadOrders({ block: false })
     } catch (err) {
+      // Handle 401 authentication errors
+      if (err instanceof HttpError && err.status === 401) {
+        clearKitchenToken()
+        navigate('/kitchen', { replace: true })
+        return
+      }
+      
       toast({
         title: 'No se pudo eliminar',
         description: err instanceof Error ? err.message : 'Error inesperado',
@@ -237,6 +263,13 @@ export function KitchenBoardPage() {
       })
       await loadOrders({ block: false })
     } catch (err) {
+      // Handle 401 authentication errors
+      if (err instanceof HttpError && err.status === 401) {
+        clearKitchenToken()
+        navigate('/kitchen', { replace: true })
+        return
+      }
+      
       toast({
         title: 'No se pudo limpiar',
         description: err instanceof Error ? err.message : 'Error inesperado',
@@ -288,6 +321,12 @@ export function KitchenBoardPage() {
               >
                 {clearingAll ? 'Limpiando...' : 'Limpiar todo'}
               </Button>
+              <Link to="/reports/orders">
+                <Button variant="outline" size="sm">
+                  <FileText className="h-4 w-4 mr-1" />
+                  Reporte
+                </Button>
+              </Link>
               <Link to="/client/table">
                 <Button variant="outline" size="sm">Cliente</Button>
               </Link>

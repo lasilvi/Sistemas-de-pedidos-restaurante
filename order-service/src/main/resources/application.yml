@@ -2,9 +2,9 @@
   application:
     name: order-service
   datasource:
-    url: ${DB_URL:jdbc:postgresql://localhost:5432/restaurant_db}
-    username: ${DB_USER:restaurant_user}
-    password: ${DB_PASS:restaurant_pass}
+    url: ${DB_URL}
+    username: ${DB_USER}
+    password: ${DB_PASS}
     driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:
@@ -19,19 +19,20 @@
     locations: classpath:db/migration
     baseline-on-migrate: true
   rabbitmq:
-    host: ${RABBITMQ_HOST:localhost}
-    port: ${RABBITMQ_PORT:5672}
-    username: ${RABBITMQ_USER:guest}
-    password: ${RABBITMQ_PASS:guest}
+    host: ${RABBITMQ_HOST}
+    port: ${RABBITMQ_PORT}
+    username: ${RABBITMQ_USER}
+    password: ${RABBITMQ_PASS}
 
 server:
-  port: 8080
+  port: ${SERVER_PORT}
 
 rabbitmq:
   exchange:
-    name: order.exchange
+    name: ${RABBITMQ_EXCHANGE_NAME}
   routing-key:
-    order-placed: order.placed
+    order-placed: ${RABBITMQ_ROUTING_KEY_ORDER_PLACED}
+    order-ready: ${RABBITMQ_ROUTING_KEY_ORDER_READY}
 
 springdoc:
   api-docs:
@@ -41,6 +42,6 @@ springdoc:
 
 security:
   kitchen:
-    token-header: ${KITCHEN_TOKEN_HEADER:X-Kitchen-Token}
-    token-value: ${KITCHEN_AUTH_TOKEN:1234}
+    token-header: ${KITCHEN_TOKEN_HEADER}
+    token-value: ${KITCHEN_AUTH_TOKEN}
 
