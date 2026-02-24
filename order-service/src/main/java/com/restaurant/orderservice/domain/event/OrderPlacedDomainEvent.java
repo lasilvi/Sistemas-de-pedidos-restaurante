@@ -5,7 +5,6 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -39,7 +38,5 @@ public class OrderPlacedDomainEvent {
     public static class OrderItemData {
         private Long productId;
         private Integer quantity;
-        private BigDecimal price;
-        private String productName;
     }
 }

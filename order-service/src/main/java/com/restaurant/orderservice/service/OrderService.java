@@ -2,9 +2,7 @@ package com.restaurant.orderservice.service;
 
 import com.restaurant.orderservice.dto.*;
 import com.restaurant.orderservice.application.port.out.OrderPlacedEventPublisherPort;
-import com.restaurant.orderservice.application.port.out.OrderReadyEventPublisherPort;
 import com.restaurant.orderservice.domain.event.OrderPlacedDomainEvent;
-import com.restaurant.orderservice.domain.event.OrderReadyDomainEvent;
 import com.restaurant.orderservice.entity.Order;
 import com.restaurant.orderservice.entity.OrderItem;
 import com.restaurant.orderservice.enums.OrderStatus;
@@ -12,7 +10,6 @@ import com.restaurant.orderservice.exception.OrderNotFoundException;
 import com.restaurant.orderservice.repository.OrderRepository;
 import com.restaurant.orderservice.service.command.OrderCommandExecutor;
 import com.restaurant.orderservice.service.command.PublishOrderPlacedEventCommand;
-import com.restaurant.orderservice.service.command.PublishOrderReadyEventCommand;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -42,36 +39,26 @@ public class OrderService {
     private final OrderRepository orderRepository;
     private final OrderValidator orderValidator;
     private final OrderMapper orderMapper;
-    private final OrderEventBuilder orderEventBuilder;
     private final OrderPlacedEventPublisherPort orderPlacedEventPublisherPort;
-    private final OrderReadyEventPublisherPort orderReadyEventPublisherPort;
     private final OrderCommandExecutor orderCommandExecutor;
     
     /**
      * Constructor for OrderService.
      * 
      * @param orderRepository Repository for accessing order data
-     * @param orderValidator Validator for order business rules
-     * @param orderMapper Mapper for entity-DTO conversion
-     * @param orderEventBuilder Builder for domain events (with product enrichment)
-     * @param orderPlacedEventPublisherPort Output port for publishing order placed events
-     * @param orderReadyEventPublisherPort Output port for publishing order ready events
-     * @param orderCommandExecutor Executor for order-related commands
+     * @param productRepository Repository for accessing product data
+     * @param orderPlacedEventPublisherPort Output port for publishing order events
      */
     @Autowired
     public OrderService(OrderRepository orderRepository, 
                        OrderValidator orderValidator,
                        OrderMapper orderMapper,
-                       OrderEventBuilder orderEventBuilder,
                        OrderPlacedEventPublisherPort orderPlacedEventPublisherPort,
-                       OrderReadyEventPublisherPort orderReadyEventPublisherPort,
                        OrderCommandExecutor orderCommandExecutor) {
         this.orderRepository = orderRepository;
         this.orderValidator = orderValidator;
         this.orderMapper = orderMapper;
-        this.orderEventBuilder = orderEventBuilder;
         this.orderPlacedEventPublisherPort = orderPlacedEventPublisherPort;
-        this.orderReadyEventPublisherPort = orderReadyEventPublisherPort;
         this.orderCommandExecutor = orderCommandExecutor;
     }
     
@@ -136,7 +123,7 @@ public class OrderService {
                 savedOrder.getId(), savedOrder.getTableId(), savedOrder.getItems().size());
         
         // Build and publish domain event through output port
-        OrderPlacedDomainEvent event = orderEventBuilder.buildOrderPlacedEvent(savedOrder);
+        OrderPlacedDomainEvent event = buildOrderPlacedDomainEvent(savedOrder);
         orderCommandExecutor.execute(new PublishOrderPlacedEventCommand(orderPlacedEventPublisherPort, event));
         
         // Delegate mapping to OrderMapper
@@ -234,11 +221,6 @@ public class OrderService {
         log.info("Order status updated successfully: orderId={}, status={}", 
                 updatedOrder.getId(), updatedOrder.getStatus());
         
-        if (newStatus == OrderStatus.READY) {
-            OrderReadyDomainEvent readyEvent = orderEventBuilder.buildOrderReadyEvent(updatedOrder);
-            orderCommandExecutor.execute(new PublishOrderReadyEventCommand(orderReadyEventPublisherPort, readyEvent));
-        }
-        
         return orderMapper.mapToOrderResponse(updatedOrder);
     }
 
@@ -299,5 +281,31 @@ public class OrderService {
         
         log.info("All active orders soft-deleted successfully: count={}", count);
         return count;
+    }
+    
+    /**
+     * Builds a domain event from an Order entity.
+     * 
+     * @param order The Order entity to convert to an event
+     * @return domain event ready to be published through the output port
+     */
+    private OrderPlacedDomainEvent buildOrderPlacedDomainEvent(Order order) {
+        List<OrderPlacedDomainEvent.OrderItemData> eventItems = order.getItems().stream()
+                .map(item -> new OrderPlacedDomainEvent.OrderItemData(
+                        item.getProductId(),
+                        item.getQuantity()
+                ))
+                .collect(Collectors.toList());
+
+        return OrderPlacedDomainEvent.builder()
+                .eventId(UUID.randomUUID())
+                .eventType(OrderPlacedDomainEvent.EVENT_TYPE)
+                .eventVersion(OrderPlacedDomainEvent.CURRENT_VERSION)
+                .occurredAt(LocalDateTime.now())
+                .orderId(order.getId())
+                .tableId(order.getTableId())
+                .items(eventItems)
+                .createdAt(order.getCreatedAt())
+                .build();
     }
 }
