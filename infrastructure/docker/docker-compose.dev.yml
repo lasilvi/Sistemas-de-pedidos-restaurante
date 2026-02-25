@@ -1,0 +1,42 @@
+# Development Override for docker-compose.yml
+# Enables hot-reload for frontend via volume mounts
+#
+# Usage:
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build
+#
+# This file:
+# - Mounts frontend source code into the container
+# - Enables Vite HMR (Hot Module Replacement)
+# - Preserves node_modules inside container (faster than host)
+
+services:
+  frontend:
+    volumes:
+      # Mount source directories for hot-reload
+      - ../../src:/app/src
+      - ../../public:/app/public
+      - ../../index.html:/app/index.html
+      
+      # Mount config files
+      - ../../vite.config.ts:/app/vite.config.ts
+      - ../../tsconfig.json:/app/tsconfig.json
+      - ../../tsconfig.app.json:/app/tsconfig.app.json
+      - ../../tsconfig.node.json:/app/tsconfig.node.json
+      - ../../package.json:/app/package.json
+      - ../../eslint.config.js:/app/eslint.config.js
+      - ../../tailwind.config.cjs:/app/tailwind.config.cjs
+      - ../../postcss.config.cjs:/app/postcss.config.cjs
+      
+      # Prevent overwriting node_modules from host
+      # (use container's node_modules for faster performance)
+      - /app/node_modules
+    
+    environment:
+      # Enable file watching polling (required for Docker on Windows/WSL)
+      CHOKIDAR_USEPOLLING: "true"
+      CHOKIDAR_INTERVAL: "1000"
+      
+      # Vite HMR configuration
+      VITE_HMR_PROTOCOL: "ws"
+      VITE_HMR_HOST: "localhost"
+      VITE_HMR_PORT: "5173"

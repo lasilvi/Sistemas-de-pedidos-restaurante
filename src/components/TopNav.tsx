@@ -18,7 +18,7 @@ export function TopNav({
             🍽️
           </div>
           <div>
-            <div className="text-sm font-semibold sm:text-base">Pedidos Restaurante</div>
+            <div className="text-sm font-semibold sm:text-base">Pedidos Restaurante prueba</div>
             <div className="text-xs text-muted-foreground">Cliente y cocina en un solo flujo</div>
           </div>
         </div>

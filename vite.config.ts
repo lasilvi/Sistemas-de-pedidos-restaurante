@@ -11,6 +11,20 @@ export default defineConfig(({ mode }) => {
 
   return {
     plugins: [react(), tsconfigPaths()],
-    server: allowedHosts.length > 0 ? { allowedHosts } : undefined,
+    server: {
+      // Allow external connections (required for Docker)
+      host: '0.0.0.0',
+      port: 5173,
+      strictPort: true,
+      
+      // Enable file watching with polling (required for Docker on Windows/WSL)
+      watch: {
+        usePolling: true,
+        interval: 1000,
+      },
+      
+      // Apply allowed hosts if configured
+      ...(allowedHosts.length > 0 ? { allowedHosts } : {}),
+    },
   };
 });

@@ -48,7 +48,7 @@ export function OrdersReportPage() {
               <div>
                 <h1 className="text-3xl font-medium">Reporte de Ventas</h1>
                 <p className="text-sm text-muted-foreground">
-                  Resumen de ingresos y productos vendidos
+                  Resumen de ingresos y productos vendidos prueba.
                 </p>
               </div>
             </div>

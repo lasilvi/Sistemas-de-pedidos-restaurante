@@ -1,6 +1,32 @@
 ﻿# Guia rapida
 
-## 1) Levantar todo en modo real (recomendado)
+## ⚡ Nuevo: Modo Desarrollo Optimizado (RECOMENDADO)
+
+**Con hot-reload para frontend + rebuilds rápidos (~15-30s) para backend**:
+
+```bash
+# Windows
+.\scripts\docker-helper.ps1 dev up -d --build
+
+# Linux/Mac
+./scripts/docker-helper.sh dev up -d --build
+```
+
+**Beneficios**:
+- 🚀 Frontend: cambios instantáneos (Vite HMR)
+- ⚡ Backend: rebuilds en ~15-30 segundos (antes 2-5 min)
+- 🐳 Todo en Docker (no requiere Java/Node instalado localmente)
+
+**Cuando cambies código backend**:
+```bash
+docker compose -f infrastructure/docker/docker-compose.yml up -d --build order-service
+```
+
+Ver [DOCKER_USAGE_GUIDE.md](DOCKER_USAGE_GUIDE.md) para detalles completos.
+
+---
+
+## 1) Levantar todo en modo producción
 
 ```bash
 cp .env.example .env
